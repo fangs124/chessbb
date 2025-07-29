@@ -18,16 +18,17 @@ pub enum PieceType {
 }
 
 impl PieceType {
-    pub const fn to_char(&self) -> char {
-        match self {
-            PieceType::Pawn => 'p',
-            PieceType::Knight => 'n',
-            PieceType::Bishop => 'b',
-            PieceType::Rook => 'r',
-            PieceType::Queen => 'q',
-            PieceType::King => 'k',
-        }
-    }
+    //this is a UCI-thing
+    //pub const fn to_char(&self) -> char {
+    //    match self {
+    //        PieceType::Pawn => 'p',
+    //        PieceType::Knight => 'n',
+    //        PieceType::Bishop => 'b',
+    //        PieceType::Rook => 'r',
+    //        PieceType::Queen => 'q',
+    //        PieceType::King => 'k',
+    //    }
+    //}
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

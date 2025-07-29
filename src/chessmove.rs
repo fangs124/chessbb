@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Display};
+use std::ops::Not;
 
 use crate::PieceType;
 use crate::bitboard::*;
@@ -62,7 +63,7 @@ enum MoveType {
     Normal,
     Castle,
     EnPassant,
-    Promotion,
+    Promotion(PieceType),
 }
 
 impl ChessMove {
@@ -90,26 +91,20 @@ impl ChessMove {
     //}
 
     pub(crate) const fn move_type(&self) -> MoveType {
+        let piece: PieceType = match ((self.data & 0b11_000000_000000u16) as usize) >> 12 {
+            0b00 => PieceType::Knight,
+            0b01 => PieceType::Bishop,
+            0b10 => PieceType::Rook,
+            0b11 => PieceType::Queen,
+            _ => unreachable!(),
+        };
+
         match ((self.data & 0b11_00_000000_000000) as usize) >> 14 {
             0 => MoveType::Normal,
             1 => MoveType::Castle,
             2 => MoveType::EnPassant,
-            3 => MoveType::Promotion,
+            3 => MoveType::Promotion(piece),
             _ => unreachable!(),
-        }
-    }
-
-    pub(crate) const fn promoted_piece(&self) -> Option<PieceType> {
-        if let MoveType::Promotion = self.move_type() {
-            match ((self.data & 0b11_000000_000000u16) as usize) >> 12 {
-                0b00 => Some(PieceType::Knight),
-                0b01 => Some(PieceType::Bishop),
-                0b10 => Some(PieceType::Rook),
-                0b11 => Some(PieceType::Queen),
-                _ => unreachable!(),
-            }
-        } else {
-            None
         }
     }
 
@@ -157,10 +152,9 @@ impl ChessMove {
     //    self.set_move_type(m);
     //}
 
-    pub const fn new(s: usize, t: usize, p: Option<PieceType>, m: MoveType) -> Self {
+    pub const fn new(s: usize, t: usize, m: MoveType) -> Self {
         //assert!((p == None) == (m != MoveType::Promotion));
         //hack: PartialEq can't be used in const fn.
-
         //match p {
         //    Some(_) => match m {
         //        MoveType::Promotion => {}
@@ -175,28 +169,45 @@ impl ChessMove {
         //        _ => {}
         //    },
         //}
-        if matches!((p, m), (Some(_), _) | (None, MoveType::Promotion)) {
-            panic!("ChessMove::new() error!");
-        }
-        let mut data: u16 = 0;
-        data |= (((s << 0) & 0b111111) | ((t << 6) & 0b111111_000000)) as u16;
-        if p.is_some() {
-            let piece_data: usize = match p {
-                Some(PieceType::Knight) => 0b00,
-                Some(PieceType::Bishop) => 0b01,
-                Some(PieceType::Rook) => 0b10,
-                Some(PieceType::Queen) => 0b11,
-                _ => panic!("set_piece_data error: invalid piece_data!"),
-            };
-            data |= ((piece_data << 12) & 0b00_11_000000_000000) as u16;
-        }
+        //assert!(p.is_some() == matches!(m, MoveType::Promotion));
+
+        // can't promote to king/pawn
+        // ps: !matches!(...) is ugly
+        assert!(matches!(m, MoveType::Promotion(PieceType::King)) == false);
+        assert!(matches!(m, MoveType::Promotion(PieceType::Pawn)) == false);
+        let mut data: u16 = (((s << 0) & 0b111111) | ((t << 6) & 0b111111_000000)) as u16;
+
         let move_type_data: usize = match m {
-            MoveType::Normal => 0,
-            MoveType::Castle => 1,
-            MoveType::EnPassant => 2,
-            MoveType::Promotion => 3,
+            MoveType::Normal => 0b00_00,
+            MoveType::Castle => 0b01_00,
+            MoveType::EnPassant => 0b10_00,
+            MoveType::Promotion(PieceType::Knight) => 0b11_00,
+            MoveType::Promotion(PieceType::Bishop) => 0b11_01,
+            MoveType::Promotion(PieceType::Rook) => 0b11_10,
+            MoveType::Promotion(PieceType::Queen) => 0b11_11,
+            MoveType::Promotion(_) => unreachable!(),
         };
-        data |= ((move_type_data << 14) & 0b11_00_000000_000000) as u16;
+
+        //if p.is_some() {
+        //    let piece_data: usize = match p {
+        //        Some(PieceType::Knight) => 0b00_00,
+        //        Some(PieceType::Bishop) => 0b00_01,
+        //        Some(PieceType::Rook) => 0b10,
+        //        Some(PieceType::Queen) => 0b11,
+        //        _ => panic!("set_piece_data error: invalid piece_data!"),
+        //    };
+        //    data |= ((piece_data << 12) & 0b00_11_000000_000000) as u16;
+        //}
+        //let move_type_data: usize = match m {
+        //    MoveType::Normal => 0b00,
+        //    MoveType::Castle => 0b01,
+        //    MoveType::EnPassant => 0b10,
+        //    MoveType::Promotion(piece) => 0b11,
+        //};
+        //
+        //data |= ((move_type_data << 14) & 0b11_00_000000_000000) as u16;
+
+        data |= ((move_type_data << 12) & 0b11_11_000000_000000) as u16;
         Self { data }
     }
 
