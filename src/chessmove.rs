@@ -1,9 +1,9 @@
 use std::fmt::{Debug, Display};
-use std::ops::Not;
+use std::ops::{Index, Not};
 
 use crate::PieceType;
 use crate::bitboard::*;
-use crate::constvec::*;
+use crate::square::Square;
 
 /* indexing the 64-squares:
   |-----------------------| BLACK KING SIDE
@@ -59,7 +59,7 @@ pub struct ChessMove {
 //}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-enum MoveType {
+pub(crate) enum MoveType {
     Normal,
     Castle,
     EnPassant,
@@ -152,7 +152,7 @@ impl ChessMove {
     //    self.set_move_type(m);
     //}
 
-    pub const fn new(s: usize, t: usize, m: MoveType) -> Self {
+    pub const fn new(s: Square, t: Square, m: MoveType) -> Self {
         //assert!((p == None) == (m != MoveType::Promotion));
         //hack: PartialEq can't be used in const fn.
         //match p {
@@ -175,7 +175,7 @@ impl ChessMove {
         // ps: !matches!(...) is ugly
         assert!(matches!(m, MoveType::Promotion(PieceType::King)) == false);
         assert!(matches!(m, MoveType::Promotion(PieceType::Pawn)) == false);
-        let mut data: u16 = (((s << 0) & 0b111111) | ((t << 6) & 0b111111_000000)) as u16;
+        let mut data: u16 = (((s.to_index() << 0) & 0b111111) | ((t.to_index() << 6) & 0b111111_000000)) as u16;
 
         let move_type_data: usize = match m {
             MoveType::Normal => 0b00_00,
@@ -211,6 +211,23 @@ impl ChessMove {
         Self { data }
     }
 
+    pub(crate) const fn promotions(source: Square, target: Square) -> [ChessMove; 4] {
+        return [
+            ChessMove::new(source, target, MoveType::Promotion(PieceType::Queen)),
+            ChessMove::new(source, target, MoveType::Promotion(PieceType::Knight)),
+            ChessMove::new(source, target, MoveType::Promotion(PieceType::Bishop)),
+            ChessMove::new(source, target, MoveType::Promotion(PieceType::Rook)),
+        ];
+    }
+
+    pub(crate) const W_KINGSIDE_CASTLE: ChessMove =
+        ChessMove::new(Square::W_KING_SQUARE, Square::W_KINGSIDE_CASTLE_SQUARE, MoveType::Castle);
+    pub(crate) const W_QUEENSIDE_CASTLE: ChessMove =
+        ChessMove::new(Square::W_KING_SQUARE, Square::W_QUEENSIDE_CASTLE_SQUARE, MoveType::Castle);
+    pub(crate) const B_KINGSIDE_CASTLE: ChessMove =
+        ChessMove::new(Square::B_KING_SQUARE, Square::B_KINGSIDE_CASTLE_SQUARE, MoveType::Castle);
+    pub(crate) const B_QUEENSIDE_CASTLE: ChessMove =
+        ChessMove::new(Square::B_KING_SQUARE, Square::B_QUEENSIDE_CASTLE_SQUARE, MoveType::Castle);
     //note: this is uci format
     //examples
     //e7e8q for queen promotion, e2e4, etc.
@@ -223,49 +240,3 @@ impl ChessMove {
     //    }
     //}
 }
-
-/* ================ additional ChessMove-specific implementations ================ */
-//pub type MoveVec = ConstVec<Option<ChessMove>, 256>;
-//impl ConstDefault for Option<ChessMove> {
-//    const DEFAULT: Self = None;
-//}
-//
-//impl MoveVec {
-//    pub const fn nth_move(&self, index: usize) -> ChessMove {
-//        return match self.nth(index) {
-//            Some(x) => x,
-//            None => panic!(),
-//        };
-//    }
-//
-//    pub const fn new_promotions(&self, source: usize, target: usize) -> Self {
-//        assert!(self.len() + 4 <= Self::MAX_CAPACITY);
-//        let data: [Option<ChessMove>; 4] = [
-//            Some(ChessMove::new(source, target, Some(PieceType::Queen), MoveType::Promotion)),
-//            Some(ChessMove::new(source, target, Some(PieceType::Rook), MoveType::Promotion)),
-//            Some(ChessMove::new(source, target, Some(PieceType::Bishop), MoveType::Promotion)),
-//            Some(ChessMove::new(source, target, Some(PieceType::Knight), MoveType::Promotion)),
-//        ];
-//
-//        self.append(&data, 4)
-//    }
-//    //new_raw(03, 01, None, MT::Castle),
-//    pub const fn append_one_move(&self, s: usize, t: usize, p: Option<PieceType>, m: MoveType) -> MoveVec {
-//        self.append_one(Some(ChessMove::new(s, t, p, m)))
-//    }
-//
-//    pub fn to_vec(&self) -> Vec<ChessMove> {
-//        self.data()[0..self.len()].into_iter().map(|x| x.unwrap()).collect()
-//    }
-//
-//    pub fn sort(&mut self) {
-//        let moves_vec: Vec<ChessMove> = self.to_vec();
-//        let str_vec = moves_vec.clone().into_iter().map(|x| format!("{}", x)).collect::<Vec<String>>();
-//        let mut pair_vec: Vec<(String, ChessMove)> = str_vec.into_iter().zip(moves_vec.into_iter()).collect();
-//        pair_vec.sort();
-//        for i in 0..self.len() {
-//            self.set(i, Some(pair_vec[i].1));
-//        }
-//    }
-//}
-//

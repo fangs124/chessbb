@@ -1,19 +1,61 @@
 use std::fmt::Display;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Index, Not};
+
+use crate::square::Square;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct BitBoard {
+pub(crate) struct BitBoard {
     data: u64,
 }
 
-type BB = BitBoard;
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-enum Side {
+pub(crate)enum Side {
     White,
     Black,
 }
 
+impl Side {
+    pub(crate) const fn update(&self) -> Self {
+        match self {
+            Side::White => Side::Black,
+            Side::Black => Side::White,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub(crate) enum PieceType {
+    Pawn,
+    Knight,
+    Bishop,
+    Rook,
+    Queen,
+    King,
+}
+
+impl PieceType {
+    //this is a UCI-thing
+    //pub const fn to_char(&self) -> char {
+    //    match self {
+    //        PieceType::Pawn => 'p',
+    //        PieceType::Knight => 'n',
+    //        PieceType::Bishop => 'b',
+    //        PieceType::Rook => 'r',
+    //        PieceType::Queen => 'q',
+    //        PieceType::King => 'k',
+    //    }
+    //}
+
+    pub(crate) fn iterator() -> std::slice::Iter<'static, PieceType> {
+        const PIECETYPES: [PieceType; 6] =
+            [PieceType::Pawn, PieceType::Knight, PieceType::Bishop, PieceType::Rook, PieceType::Queen, PieceType::King];
+        PIECETYPES.iter()
+    }
+}
+
+
+
+pub(crate) type ChessPiece = (Side, PieceType);
 
 impl Display for BitBoard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -84,27 +126,32 @@ impl Not for BitBoard {
 }
 
 impl BitBoard {
-    pub (crate) const fn new(data: u64) -> Self {
+    pub(crate) const fn new(data: u64) -> Self {
         Self { data }
     }
 
-    pub (crate) const ZERO: BitBoard = BitBoard { data: 0u64 };
-    pub (crate) const ONES: BitBoard = BitBoard { data: u64::MAX };
+    pub(crate) const ZERO: BitBoard = BitBoard { data: 0u64 };
+    pub(crate) const ONES: BitBoard = BitBoard { data: u64::MAX };
 
     //creates a bitboard with a a non-zero bit in the n-th place
-    pub (crate) const fn nth(n: usize) -> Self {
-        Self { data: 1u64 << n }
+    //pub(crate) const fn nth(n: usize) -> Self {
+    //    Self { data: 1u64 << n }
+    //}
+
+    pub(crate) const fn nth(sq: Square) -> Self {
+        Self { data: 1u64 << sq.to_index() }
     }
 
-    pub const fn nth_is_zero(&self, index: usize) -> bool {
-        match self.data & (1u64 << index) {
+
+    pub const fn nth_is_zero(&self, sq: Square) -> bool {
+        match self.data & (1u64 << sq.to_index()) {
             0 => true,
             _ => false,
         }
     }
 
-    pub const fn nth_is_not_zero(&self, index: usize) -> bool {
-        match self.data & (1u64 << index) {
+    pub const fn nth_is_not_zero(&self, sq: Square) -> bool {
+        match self.data & (1u64 << sq.to_index()) {
             0 => false,
             _ => true,
         }
@@ -118,32 +165,32 @@ impl BitBoard {
         self.data != 0u64
     }
 
-    pub (crate)  fn set_bit(&mut self, i: usize) {
+    pub(crate)  fn set_bit(&mut self, i: usize) {
         self.data = self.data | 1u64 << i;
     }
 
-    pub (crate) const fn get_bit(&self, i: usize) -> BitBoard {
+    pub(crate) const fn get_bit(&self, i: usize) -> BitBoard {
         BitBoard {
             data: self.data & (1u64 << i),
         }
     }
 
-    pub (crate) const fn pop_bit(&self, i: usize) -> BitBoard {
+    pub(crate) const fn pop_bit(&self, square: Square) -> BitBoard {
         BitBoard {
-            data: self.data & !(1u64 << i),
+            data: self.data & !(1u64 << square.to_index()),
         }
     }
 
-    pub (crate) const fn get_bit_data(&self, i: usize) -> u64 {
+    pub(crate) const fn get_bit_data(&self, i: usize) -> u64 {
         self.data & (1u64 << i)
     }
 
-    pub (crate) const fn pop_bit_data(&self, i: usize) -> u64 {
+    pub(crate) const fn pop_bit_data(&self, i: usize) -> u64 {
         self.data & !(1u64 << i)
     }
 
     // index of least-significant-bit (lsb)
-    pub (crate) const fn lsb_index(&self) -> Option<usize> {
+    pub(crate) const fn lsb_index(&self) -> Option<usize> {
         if self.data == 0u64 {
             return None;
         } else {
@@ -151,29 +198,38 @@ impl BitBoard {
         }
     }
 
-    pub (crate) const fn count_ones(&self) -> u32 {
+    // square of least-significant-bit (lsb)
+    pub(crate) const fn lsb_square(&self) -> Option<Square> {
+        if self.data == 0u64 {
+            return None;
+        } else {
+            return Some(Square::new(self.data.trailing_zeros() as u8));
+        }
+    }
+
+    pub(crate) const fn count_ones(&self) -> u32 {
         self.data.count_ones()
     }
 
-    pub (crate) const fn bit_and(&self, other: &BitBoard) -> BitBoard {
+    pub(crate) const fn bit_and(&self, other: &BitBoard) -> BitBoard {
         BitBoard {
             data: self.data & other.data,
         }
     }
 
-    pub (crate) const fn bit_or(&self, other: &BitBoard) -> BitBoard {
+    pub(crate) const fn bit_or(&self, other: &BitBoard) -> BitBoard {
         BitBoard {
             data: self.data | other.data,
         }
     }
 
-    pub (crate) const fn bit_xor(&self, other: &BitBoard) -> BitBoard {
+    pub(crate) const fn bit_xor(&self, other: &BitBoard) -> BitBoard {
         BitBoard {
             data: self.data ^ other.data,
         }
     }
 
-    pub (crate) const fn bit_not(&self) -> BitBoard {
+    pub(crate) const fn bit_not(&self) -> BitBoard {
         BitBoard { data: !self.data }
     }
 }
@@ -186,6 +242,7 @@ const BISHOP_MBB_MASK: [BitBoard; 64] = bishop_mbb_mask();
 const ROOK_MBB_MASK: [BitBoard; 64] = rook_mbb_mask();
 const BISHOP_ATTACKS_MBB: [[BitBoard; 1 << 9]; 64] = BISHOP;
 const ROOK_ATTACKS_MBB: [[BitBoard; 1 << 12]; 64] = ROOK;
+pub(crate) const RAYS: [[BitBoard; 64]; 64] = rays();
 
 const fn pawn_attack(side: Side) -> [BitBoard; 64] {
     let mut i: usize = 0;
@@ -524,11 +581,11 @@ const fn compute_occ_bb(index: usize, mask_bitcount: usize, attack_mask: BitBoar
     // while attack_mask is non-zero
     while i < mask_bitcount && attack_mask.data != 0 {
         // square_index is index of least_significant bit
-        if let Some(square_index) = attack_mask.lsb_index() {
+        if let Some(square_index) = attack_mask.lsb_square() {
             attack_mask = attack_mask.pop_bit(square_index);
             // check that square is within range of index
             if index & (1 << i) != 0usize {
-                occupancy_bb.data |= 1u64 << square_index
+                occupancy_bb.data |= 1u64 << square_index.to_index()
             }
         }
         i += 1;
@@ -593,9 +650,33 @@ const fn rook_attack_mbb() -> [[BitBoard; SIZE_ROOK]; 64] {
     return attacks;
 }
 
+const fn rays() -> [[BitBoard; 64]; 64] {
+    let mut rays: [[BitBoard; 64]; 64] = [[BitBoard::ZERO; 64]; 64];
+    let mut i: usize = 0;
+    while i < 64 {
+        let i_square =  Square::new(i as u8);
+        let mut j: usize = 0;
+        while j < 64 {
+            let j_square = Square::new(j as u8);
+            let data = (1u64 << i) | (1u64 << j);
+            let squares = BitBoard { data };
+            if (ROWS[i] == ROWS[j]) || (COLS[i] == COLS[j]) {
+                let data: u64 = const_get_rook_attack(i_square, squares).data & const_get_rook_attack(j_square, squares).data;
+                rays[i][j].data = data;
+            } else if (DDIAG[i] == DDIAG[j]) || (ADIAG[i] == ADIAG[j]) {
+                let data = const_get_bishop_attack(i_square, squares).data & const_get_bishop_attack(j_square, squares).data;
+                rays[i][j].data = data;
+            }
+            j += 1;
+        }
+        i += 1;
+    }
+    rays
+}
+
 /* ==== magic ==== */
-include!("bishop.rs");
-include!("rook.rs");
+include!("data/bishop.rs");
+include!("data/rook.rs");
 
 #[rustfmt::skip]
 const BISHOP_MAGICS: [u64; 64] = [
@@ -663,85 +744,98 @@ const fn magic_index(magic_num: u64, blockers: BitBoard, bitcount: usize) -> usi
     ((blockers.data.wrapping_mul(magic_num)) >> (64 - bitcount)) as usize
 }
 
-const fn const_get_bishop_attack(square: usize, blockers: BitBoard) -> BitBoard {
-    let mask = BISHOP_MBB_MASK[square];
+const fn const_get_bishop_attack(square: Square, blockers: BitBoard) -> BitBoard {
+    let mask = BISHOP_MBB_MASK[square.to_index()];
     let data = blockers.data & mask.data;
     let blockers = BitBoard { data };
-    let m = magic_index(BISHOP_MAGICS[square], blockers, BISHOP_OCC_BITCOUNT[square]);
-    return BISHOP_ATTACKS_MBB[square][m];
+    let m = magic_index(BISHOP_MAGICS[square.to_index()], blockers, BISHOP_OCC_BITCOUNT[square.to_index()]);
+    return BISHOP_ATTACKS_MBB[square.to_index()][m];
 }
 
-const fn const_get_rook_attack(square: usize, blockers: BitBoard) -> BitBoard {
-    let mask = ROOK_MBB_MASK[square];
+const fn const_get_rook_attack(square: Square, blockers: BitBoard) -> BitBoard {
+    let mask = ROOK_MBB_MASK[square.to_index()];
     let data = blockers.data & mask.data;
     let blockers = BitBoard { data };
-    let m = magic_index(ROOK_MAGICS[square], blockers, ROOK_OCC_BITCOUNT[square]);
-    return ROOK_ATTACKS_MBB[square][m];
+    let m = magic_index(ROOK_MAGICS[square.to_index()], blockers, ROOK_OCC_BITCOUNT[square.to_index()]);
+    return ROOK_ATTACKS_MBB[square.to_index()][m];
 }
 
 /* ==== constants and supporting functions ==== */
 const ASCII_SYM: [char; 12] = ['K', 'Q', 'N', 'B', 'R', 'P', 'k', 'q', 'n', 'b', 'r', 'p'];
 const UNICODE_SYM: [char; 12] = ['♚', '♛', '♞', '♝', '♜', '♟', '♔', '♕', '♘', '♗', '♖', '♙'];
 
-const W_KING_SIDE_CASTLE_MASK: BB =
-    BB::new(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000110);
-const W_QUEEN_SIDE_CASTLE_MASK: BB =
-    BB::new(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_01110000);
-const B_KING_SIDE_CASTLE_MASK: BB =
-    BB::new(0b00000110_00000000_00000000_00000000_00000000_00000000_00000000_00000000);
-const B_QUEEN_SIDE_CASTLE_MASK: BB =
-    BB::new(0b01110000_00000000_00000000_00000000_00000000_00000000_00000000_00000000);
+pub(crate) const W_KING_SIDE_CASTLE_MASK: BitBoard =
+    BitBoard::new(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000110);
+pub(crate) const W_QUEEN_SIDE_CASTLE_MASK: BitBoard =
+    BitBoard::new(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_01110000);
+pub(crate) const B_KING_SIDE_CASTLE_MASK: BitBoard =
+    BitBoard::new(0b00000110_00000000_00000000_00000000_00000000_00000000_00000000_00000000);
+pub(crate) const B_QUEEN_SIDE_CASTLE_MASK: BitBoard =
+    BitBoard::new(0b01110000_00000000_00000000_00000000_00000000_00000000_00000000_00000000);
 
-pub fn get_pawn_attack(square: usize, side: Side) -> BitBoard {
+pub fn get_pawn_attack(square: Square, side: Side) -> BitBoard {
     match side {
-        Side::White => W_PAWN_ATTACKS[square],
-        Side::Black => B_PAWN_ATTACKS[square],
+        Side::White => W_PAWN_ATTACKS[square.to_index()],
+        Side::Black => B_PAWN_ATTACKS[square.to_index()],
     }
 }
 
-pub const fn get_w_pawn_attack(square: usize) -> BitBoard {
-    W_PAWN_ATTACKS[square]
+pub const fn get_w_pawn_attack(square: Square) -> BitBoard {
+    W_PAWN_ATTACKS[square.to_index()]
 }
 
-pub const fn get_b_pawn_attack(square: usize) -> BitBoard {
-    B_PAWN_ATTACKS[square]
+pub const fn get_b_pawn_attack(square: Square) -> BitBoard {
+    B_PAWN_ATTACKS[square.to_index()]
 }
 
-pub const fn get_knight_attack(square: usize) -> BitBoard {
-    KNIGHT_ATTACKS[square]
+pub const fn get_knight_attack(square: Square) -> BitBoard {
+    KNIGHT_ATTACKS[square.to_index()]
 }
 
-pub const fn get_king_attack(square: usize) -> BitBoard {
-    KING_ATTACKS[square]
+pub const fn get_king_attack(square: Square) -> BitBoard {
+    KING_ATTACKS[square.to_index()]
 }
 
-pub const fn get_bishop_attack(square: usize, blockers: BitBoard) -> BitBoard {
-    let data = blockers.data & BISHOP_MBB_MASK[square].data;
+pub const fn get_bishop_attack(square: Square, blockers: BitBoard) -> BitBoard {
+    let data = blockers.data & BISHOP_MBB_MASK[square.to_index()].data;
     let m = magic_index(
-        BISHOP_MAGICS[square],
+        BISHOP_MAGICS[square.to_index()],
         BitBoard { data },
-        BISHOP_OCC_BITCOUNT[square],
+        BISHOP_OCC_BITCOUNT[square.to_index()],
     );
-    return BISHOP_ATTACKS_MBB[square][m];
+    return BISHOP_ATTACKS_MBB[square.to_index()][m];
 }
 
-pub const fn get_rook_attack(square: usize, blockers: BitBoard) -> BitBoard {
-    let data = blockers.data & ROOK_MBB_MASK[square].data;
+pub const fn get_rook_attack(square: Square, blockers: BitBoard) -> BitBoard {
+    let data = blockers.data & ROOK_MBB_MASK[square.to_index()].data;
     let m = magic_index(
-        ROOK_MAGICS[square],
+        ROOK_MAGICS[square.to_index()],
         BitBoard { data },
-        ROOK_OCC_BITCOUNT[square],
+        ROOK_OCC_BITCOUNT[square.to_index()],
     );
-    return ROOK_ATTACKS_MBB[square][m];
+    return ROOK_ATTACKS_MBB[square.to_index()][m];
 }
 
-pub const fn get_queen_attack(square: usize, blockers: BitBoard) -> BitBoard {
+pub const fn get_queen_attack(square: Square, blockers: BitBoard) -> BitBoard {
     BitBoard {
         data: get_bishop_attack(square, blockers).data | get_rook_attack(square, blockers).data,
     }
 }
-
-
+pub const fn is_same_diag(source: Square, target: Square) -> bool {
+   (DDIAG[source.to_index()] == DDIAG[target.to_index()]) || (ADIAG[source.to_index()] == ADIAG[target.to_index()])
+}
+pub const fn is_same_adiag(source: Square, target: Square) -> bool {
+    ADIAG[source.to_index()] == ADIAG[target.to_index()]
+}
+pub const fn is_same_ddiag(source: Square, target: Square) -> bool {
+    DDIAG[source.to_index()] == DDIAG[target.to_index()]
+}
+pub const fn is_same_col(source: Square, target: Square) -> bool {
+   COLS[source.to_index()] == COLS[target.to_index()]
+}
+pub const fn is_same_row(source: Square, target: Square) -> bool {
+   ROWS[source.to_index()] == ROWS[target.to_index()]
+}
 /* ==== labels ==== */
 
 /* indexing the 64-squares:
@@ -845,21 +939,6 @@ pub(crate) const ADIAG: [usize; 64] = [
     07, 08, 09, 10, 11, 12, 13, 14, //
 ];
 
-#[rustfmt::skip]
-pub(crate) const INITIAL_CHESS_POS: [BitBoard; 12] = [
-    BitBoard::new(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001000), // ♔
-    BitBoard::new(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00010000), // ♕
-    BitBoard::new(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_01000010), // ♘
-    BitBoard::new(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00100100), // ♗
-    BitBoard::new(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_10000001), // ♖
-    BitBoard::new(0b00000000_00000000_00000000_00000000_00000000_00000000_11111111_00000000), // ♙
-    BitBoard::new(0b00001000_00000000_00000000_00000000_00000000_00000000_00000000_00000000), // ♚
-    BitBoard::new(0b00010000_00000000_00000000_00000000_00000000_00000000_00000000_00000000), // ♛
-    BitBoard::new(0b01000010_00000000_00000000_00000000_00000000_00000000_00000000_00000000), // ♞
-    BitBoard::new(0b00100100_00000000_00000000_00000000_00000000_00000000_00000000_00000000), // ♝
-    BitBoard::new(0b10000001_00000000_00000000_00000000_00000000_00000000_00000000_00000000), // ♜
-    BitBoard::new(0b00000000_11111111_00000000_00000000_00000000_00000000_00000000_00000000), // ♟
-];
 
 /* ==== macros ==== */
 #[rustfmt::skip]
@@ -895,4 +974,56 @@ macro_rules! cpt {
     (b) => {(Side::Black, PieceType::Bishop)};
     (r) => {(Side::Black, PieceType::Rook  )};
     (p) => {(Side::Black, PieceType::Pawn  )};
+}
+
+#[rustfmt::skip]
+#[macro_export]
+macro_rules! cpt_index {
+    (K) => {(00)};
+    (Q) => {(01)};
+    (N) => {(02)};
+    (B) => {(03)};
+    (R) => {(04)};
+    (P) => {(05)};
+    (k) => {(06)};
+    (q) => {(07)};
+    (n) => {(08)};
+    (b) => {(09)};
+    (r) => {(10)};
+    (p) => {(11)};
+}
+
+pub const fn cp_index(data: ChessPiece) -> usize {
+    match data {
+        cpt!(K) => 00,
+        cpt!(Q) => 01,
+        cpt!(N) => 02,
+        cpt!(B) => 03,
+        cpt!(R) => 04,
+        cpt!(P) => 05,
+        cpt!(k) => 06,
+        cpt!(q) => 07,
+        cpt!(n) => 08,
+        cpt!(b) => 09,
+        cpt!(r) => 10,
+        cpt!(p) => 11,
+    }
+}
+
+pub const fn sym_index(c: char) -> usize {
+    match c {
+        'K' => 0,
+        'Q' => 1,
+        'N' => 2,
+        'B' => 3,
+        'R' => 4,
+        'P' => 5,
+        'k' => 6,
+        'q' => 7,
+        'n' => 8,
+        'b' => 9,
+        'r' => 10,
+        'p' => 11,
+        _ => panic!("sym_index error: invalid char!"),
+    }
 }
