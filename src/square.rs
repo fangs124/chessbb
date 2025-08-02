@@ -1,7 +1,3 @@
-use std::ops::Range;
-
-use crate::bitboard::BitBoard;
-
 // atlernative: enum all 64 squares, and to index do this
 // make the enum `#[repr(u8)]`, then just cast it `as u8 as usize`
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

@@ -76,20 +76,6 @@ impl ChessMove {
         ((self.data & 0b111111_000000u16) as usize) >> 6
     }
 
-    //pub(crate) const fn piece_data(&self) -> Option<PieceType> {
-    //    if let MoveType::Promotion = self.move_type() {
-    //        match ((self.data & 0b11_000000_000000u16) as usize) >> 12 {
-    //            0b00 => Some(PieceType::Knight),
-    //            0b01 => Some(PieceType::Bishop),
-    //            0b10 => Some(PieceType::Rook),
-    //            0b11 => Some(PieceType::Queen),
-    //            _ => unreachable!(),
-    //        }
-    //    } else {
-    //        None
-    //    }
-    //}
-
     pub(crate) const fn move_type(&self) -> MoveType {
         let piece: PieceType = match ((self.data & 0b11_000000_000000u16) as usize) >> 12 {
             0b00 => PieceType::Knight,
@@ -117,60 +103,7 @@ impl ChessMove {
         self.data &= ((index << 6) & 0b111111_000000) as u16;
     }
 
-    //pub(crate) const fn set_piece_data(&mut self, piece_data: Option<PieceType>) {
-    //    //doesn't check: piece_data == None <-> move_type != Promotion
-    //    if piece_data == None {
-    //        return;
-    //    } else {
-    //        let piece_data: usize = match piece_data {
-    //            Some(PieceType::Knight) => 0b00,
-    //            Some(PieceType::Bishop) => 0b01,
-    //            Some(PieceType::Rook) => 0b10,
-    //            Some(PieceType::Queen) => 0b11,
-    //            _ => panic!("set_piece_data error: invalid piece_data!"),
-    //        };
-    //        self.data &= ((piece_data << 12) & 0b11_00_000000_000000) as u16;
-    //    }
-    //}
-    //
-    //pub(crate) fn set_move_type(&mut self, move_type: MoveType) {
-    //    let move_type_data = match move_type {
-    //        MoveType::Normal => 0,
-    //        MoveType::Castle => 1,
-    //        MoveType::EnPassant => 2,
-    //        MoveType::Promotion => 3,
-    //    };
-    //    self.data &= ((move_type_data << 14) & 0b11_00_000000_000000) as u16;
-    //}
-
-    /* helper functions */
-    //fn set_data(&mut self, s: usize, t: usize, p: Option<PieceType>, m: MoveType) {
-    //    assert!((p == None) == (m != MoveType::Promotion));
-    //    self.set_source(s);
-    //    self.set_target(t);
-    //    self.set_piece_data(p);
-    //    self.set_move_type(m);
-    //}
-
     pub const fn new(s: Square, t: Square, m: MoveType) -> Self {
-        //assert!((p == None) == (m != MoveType::Promotion));
-        //hack: PartialEq can't be used in const fn.
-        //match p {
-        //    Some(_) => match m {
-        //        MoveType::Promotion => {}
-        //        _ => {
-        //            panic!("ChessMove::new() error!")
-        //        }
-        //    },
-        //    None => match m {
-        //        MoveType::Promotion => {
-        //            panic!("ChessMove::new() error!")
-        //        }
-        //        _ => {}
-        //    },
-        //}
-        //assert!(p.is_some() == matches!(m, MoveType::Promotion));
-
         // can't promote to king/pawn
         // ps: !matches!(...) is ugly
         assert!(matches!(m, MoveType::Promotion(PieceType::King)) == false);
@@ -187,25 +120,6 @@ impl ChessMove {
             MoveType::Promotion(PieceType::Queen) => 0b11_11,
             MoveType::Promotion(_) => unreachable!(),
         };
-
-        //if p.is_some() {
-        //    let piece_data: usize = match p {
-        //        Some(PieceType::Knight) => 0b00_00,
-        //        Some(PieceType::Bishop) => 0b00_01,
-        //        Some(PieceType::Rook) => 0b10,
-        //        Some(PieceType::Queen) => 0b11,
-        //        _ => panic!("set_piece_data error: invalid piece_data!"),
-        //    };
-        //    data |= ((piece_data << 12) & 0b00_11_000000_000000) as u16;
-        //}
-        //let move_type_data: usize = match m {
-        //    MoveType::Normal => 0b00,
-        //    MoveType::Castle => 0b01,
-        //    MoveType::EnPassant => 0b10,
-        //    MoveType::Promotion(piece) => 0b11,
-        //};
-        //
-        //data |= ((move_type_data << 14) & 0b11_00_000000_000000) as u16;
 
         data |= ((move_type_data << 12) & 0b11_11_000000_000000) as u16;
         Self { data }
@@ -228,15 +142,4 @@ impl ChessMove {
         ChessMove::new(Square::B_KING_SQUARE, Square::B_KINGSIDE_CASTLE_SQUARE, MoveType::Castle);
     pub(crate) const B_QUEENSIDE_CASTLE: ChessMove =
         ChessMove::new(Square::B_KING_SQUARE, Square::B_QUEENSIDE_CASTLE_SQUARE, MoveType::Castle);
-    //note: this is uci format
-    //examples
-    //e7e8q for queen promotion, e2e4, etc.
-    //pub fn print_move(&self) -> String {
-    //    if self.piece().is_some() {
-    //        let piece = self.piece().unwrap();
-    //        format!("{}{}{}", SQUARE_SYM[self.source()], SQUARE_SYM[self.target()], piece.to_char())
-    //    } else {
-    //        format!("{}{}", SQUARE_SYM[self.source()], SQUARE_SYM[self.target()])
-    //    }
-    //}
 }
