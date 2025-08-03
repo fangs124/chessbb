@@ -27,11 +27,18 @@ impl Square {
     }
 
     pub fn iterator() -> std::slice::Iter<'static, Square> {
-        // english grammar is broken
         SQUARES.iter()
-        //(Range { start: 0u8, end: 64u8 }).into_iter()
     }
 
+    pub(crate) const fn squares_array_usize() -> [usize; 64] {
+        SQUARES_RAW_USIZE
+    }
+
+    pub(crate) const fn squares_array() -> [Square; 64] {
+        SQUARES
+    }
+
+    /* convenient const for castling */
     pub(crate) const W_KING_SQUARE: Square = Square { data: 03 };
     pub(crate) const W_KINGSIDE_CASTLE_SQUARE: Square = Square { data: 01 };
     pub(crate) const W_QUEENSIDE_CASTLE_SQUARE: Square = Square { data: 05 };
@@ -51,7 +58,19 @@ const SQUARES_RAW: [u8; 64] = [
     56, 57, 58, 59, 60, 61, 62, 63, //
 ];
 
+const SQUARES_RAW_USIZE: [usize; 64] = [
+    00, 01, 02, 03, 04, 05, 06, 07, //
+    08, 09, 10, 11, 12, 13, 14, 15, //
+    16, 17, 18, 19, 20, 21, 22, 23, //
+    24, 25, 26, 27, 28, 29, 30, 31, //
+    32, 33, 34, 35, 36, 37, 38, 39, //
+    40, 41, 42, 43, 44, 45, 46, 47, //
+    48, 49, 50, 51, 52, 53, 54, 55, //
+    56, 57, 58, 59, 60, 61, 62, 63, //
+];
+
 type Sq = Square;
+
 #[rustfmt::skip]
 const SQUARES: [Square; 64] = [
     Sq{data : 00}, Sq{data : 01}, Sq{data : 02}, Sq{data : 03}, Sq{data : 04}, Sq{data : 05}, Sq{data : 06}, Sq{data : 07}, //

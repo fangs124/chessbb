@@ -1,333 +1,6 @@
 use super::chessmove::*;
 use super::*;
 
-fn update_state(cb: &mut ChessBoard, chess_move: ChessMove) {
-    let mut enpassant_bb: BitBoard = BitBoard::ZERO;
-    let source: Square = chess_move.source();
-    let target: Square = chess_move.target();
-    let source_piece = cb.mailbox[source.to_index()].expect("update_state error: source mailbox is None");
-    let source_index = cp_index(source_piece);
-    let target_piece = cb.mailbox[target.to_index()];
-    let target_index = match target_piece {
-        Some(target_piece) => Some(cp_index(target_piece)),
-        None => None,
-    };
-
-    let mut current_hash = cb.hash();
-    current_hash ^= ZorbistHash::compute_enpassant_hash(cb.enpassant_bb);
-
-    let mut is_counter_reset: bool = false; //fifty-move-rule counter
-
-    /* special case book keeping */
-    match source_piece {
-        /* castling */
-        (Side::White, PieceType::King) => {
-            if cb.castle_bools[0] {
-                current_hash ^= ZorbistHash::castle_hash(Castling::KINGSIDE(Side::White));
-            }
-            cb.castle_bools[0] = false;
-            if cb.castle_bools[1] {
-                current_hash ^= ZorbistHash::castle_hash(Castling::QUEENSIDE(Side::White));
-            }
-            cb.castle_bools[1] = false;
-        }
-        (Side::Black, PieceType::King) => {
-            if cb.castle_bools[2] {
-                current_hash ^= ZorbistHash::castle_hash(Castling::KINGSIDE(Side::Black));
-            }
-            cb.castle_bools[2] = false;
-            if cb.castle_bools[3] {
-                current_hash ^= ZorbistHash::castle_hash(Castling::QUEENSIDE(Side::Black));
-            }
-            cb.castle_bools[3] = false;
-        }
-        (Side::White, PieceType::Rook) => {
-            //FIXME
-            if source == Square::new(0) {
-                if cb.castle_bools[0] {
-                    current_hash ^= ZorbistHash::castle_hash(Castling::KINGSIDE(Side::White));
-                }
-                cb.castle_bools[0] = false;
-            } else if source == Square::new(7) {
-                if cb.castle_bools[1] {
-                    current_hash ^= ZorbistHash::castle_hash(Castling::QUEENSIDE(Side::White));
-                }
-                cb.castle_bools[1] = false
-            }
-        }
-        (Side::Black, PieceType::Rook) => {
-            //FIXME
-            if source == Square::new(56) {
-                if cb.castle_bools[2] {
-                    current_hash ^= ZorbistHash::castle_hash(Castling::KINGSIDE(Side::Black));
-                }
-                cb.castle_bools[2] = false;
-            } else if source == Square::new(63) {
-                if cb.castle_bools[3] {
-                    current_hash ^= ZorbistHash::castle_hash(Castling::QUEENSIDE(Side::Black));
-                }
-                cb.castle_bools[3] = false
-            }
-        }
-
-        /* en-passant and fifty-move-rule */
-        (Side::White, PieceType::Pawn) => {
-            //reset 50-move rule
-            cb.fifty_move_rule_counter = 0;
-            is_counter_reset = true;
-            //if move is a 2-square pawn move, update en-passant bitboard
-            if source.to_index() + 16 == target.to_index() {
-                //FIXME Square::new(_) ugliness, logical ugliness
-                if (cb.mailbox[target.to_index() + 1] == opt_cpt!(p)
-                    && (cb.is_piece_pinned(Square::new(target.to_u8() + 1)) == false)
-                    && (COLS[source.to_index()] != 7))
-                    || cb.mailbox[target.to_index() - 1] == opt_cpt!(p)
-                        && (cb.is_piece_pinned(Square::new(target.to_u8() - 1)) == false
-                            && (COLS[source.to_index()] != 0))
-                {
-                    enpassant_bb = enpassant_bb.bit_and(&BitBoard::nth(Square::new(target.to_u8() - 8)));
-                }
-            }
-        }
-        (Side::Black, PieceType::Pawn) => {
-            //reset 50-move rule
-            cb.fifty_move_rule_counter = 0;
-            is_counter_reset = true;
-            //if move is a 2-square pawn move, update en-passant bitboard
-            if source.to_index() == target.to_index() + 16 {
-                //FIXME Square::new(_) ugliness, logical ugliness
-                if (cb.mailbox[target.to_index() + 1] == opt_cpt!(p)
-                    && (cb.is_piece_pinned(Square::new(target.to_u8() + 1)) == false)
-                    && (COLS[source.to_index()] != 7))
-                    || cb.mailbox[target.to_index() - 1] == opt_cpt!(p)
-                        && (cb.is_piece_pinned(Square::new(target.to_u8() - 1)) == false
-                            && (COLS[source.to_index()] != 0))
-                {
-                    enpassant_bb = enpassant_bb.bit_and(&BitBoard::nth(Square::new(target.to_u8() - 8)));
-                }
-            }
-        }
-        _ => (),
-    }
-
-    //move the piece
-    cb.piece_bbs[source_index] = cb.piece_bbs[source_index].pop_bit(source);
-    cb.piece_bbs[source_index] = cb.piece_bbs[source_index].bit_or(&BitBoard::nth(target));
-    current_hash ^= ZorbistHash::piece_hash(source, source_piece);
-    current_hash ^= ZorbistHash::piece_hash(target, source_piece);
-    cb.mailbox[source.to_index()] = None;
-    cb.mailbox[target.to_index()] = Some(source_piece);
-
-    match chess_move.move_type() {
-        MoveType::Normal => {
-            //dealing with captures
-            if let Some(target_piece) = target_piece {
-                is_counter_reset = true;
-                current_hash ^= ZorbistHash::piece_hash(target, target_piece);
-
-                //reset 50-move rule
-                cb.fifty_move_rule_counter = 0;
-                is_counter_reset = true;
-
-                //if capturing enemy rook, update castling rights
-                match (target_piece, target.to_u8()) {
-                    (cpt!(R), 00u8) => {
-                        if cb.castle_bools[0] {
-                            current_hash ^= ZorbistHash::castle_hash(Castling::KINGSIDE(Side::White));
-                        }
-                        cb.castle_bools[0] = false;
-                    }
-                    (cpt!(R), 07u8) => {
-                        if cb.castle_bools[1] {
-                            current_hash ^= ZorbistHash::castle_hash(Castling::QUEENSIDE(Side::White));
-                        }
-                        cb.castle_bools[1] = false;
-                    }
-                    (cpt!(r), 56u8) => {
-                        if cb.castle_bools[2] {
-                            current_hash ^= ZorbistHash::castle_hash(Castling::KINGSIDE(Side::Black));
-                        }
-                        cb.castle_bools[2] = false;
-                    }
-                    (cpt!(r), 63u8) => {
-                        if cb.castle_bools[3] {
-                            current_hash ^= ZorbistHash::castle_hash(Castling::QUEENSIDE(Side::Black));
-                        }
-                        cb.castle_bools[3] = false;
-                    }
-                    _ => (),
-                }
-            }
-        }
-
-        MoveType::Castle(castling) => {
-            //let white_kingside_rook_sq_source: Square = Square::new(00);
-            //let white_kingside_rook_sq_target: Square = Square::new(02);
-            //let white_queenside_rook_sq_source: Square = Square::new(07);
-            //let white_queenside_rook_sq_target: Square = Square::new(04);
-            //let black_kingside_rook_sq_source: Square = Square::new(56);
-            //let black_kingside_rook_sq_target: Square = Square::new(58);
-            //let black_queenside_rook_sq_source: Square = Square::new(63);
-            //let black_queenside_rook_sq_target: Square = Square::new(60);
-            let wkr_s: Square = Square::new(00);
-            let wkr_t: Square = Square::new(02);
-            let wqr_s: Square = Square::new(07);
-            let wqr_t: Square = Square::new(04);
-            let bkr_s: Square = Square::new(56);
-            let bkr_t: Square = Square::new(58);
-            let bqr_s: Square = Square::new(63);
-            let bqr_t: Square = Square::new(60);
-            match castling {
-                Castling::KINGSIDE(Side::White) => {
-                    // check if rook is present
-                    assert!(cb.piece_bbs[04].nth_is_not_zero(wkr_s));
-                    cb.piece_bbs[04] = cb.piece_bbs[04].pop_bit(wkr_s);
-                    cb.piece_bbs[04] = cb.piece_bbs[04].bit_or(&BitBoard::nth(wkr_t));
-                    cb.mailbox[wkr_s.to_index()] = None;
-                    cb.mailbox[wkr_t.to_index()] = opt_cpt!(R);
-
-                    //update hash
-                    current_hash ^= ZorbistHash::piece_hash(wkr_s, cpt!(R));
-                    current_hash ^= ZorbistHash::piece_hash(wkr_t, cpt!(R));
-                }
-                Castling::QUEENSIDE(Side::White) => {
-                    // check if rook is present
-                    assert!(cb.piece_bbs[04].nth_is_not_zero(wqr_s));
-                    cb.piece_bbs[04] = cb.piece_bbs[04].pop_bit(wqr_s);
-                    cb.piece_bbs[04] = cb.piece_bbs[04].bit_or(&BitBoard::nth(wqr_t));
-                    cb.mailbox[wqr_s.to_index()] = None;
-                    cb.mailbox[wqr_t.to_index()] = opt_cpt!(R);
-
-                    //update hash
-                    current_hash ^= ZorbistHash::piece_hash(wqr_s, cpt!(R));
-                    current_hash ^= ZorbistHash::piece_hash(wqr_t, cpt!(R));
-                }
-                Castling::KINGSIDE(Side::Black) => {
-                    // check if rook is present
-                    assert!(cb.piece_bbs[10].nth_is_not_zero(bkr_s));
-                    cb.piece_bbs[10] = cb.piece_bbs[10].pop_bit(bkr_s);
-                    cb.piece_bbs[10] = cb.piece_bbs[10].bit_or(&BitBoard::nth(bkr_t));
-                    cb.mailbox[bkr_s.to_index()] = None;
-                    cb.mailbox[bkr_t.to_index()] = opt_cpt!(R);
-
-                    //update hash
-                    current_hash ^= ZorbistHash::piece_hash(bkr_s, cpt!(r));
-                    current_hash ^= ZorbistHash::piece_hash(bkr_t, cpt!(r));
-                }
-                Castling::QUEENSIDE(Side::Black) => {
-                    // check if rook is present
-                    assert!(cb.piece_bbs[10].nth_is_not_zero(bqr_s));
-                    cb.piece_bbs[10] = cb.piece_bbs[10].pop_bit(bqr_s);
-                    cb.piece_bbs[10] = cb.piece_bbs[10].bit_or(&BitBoard::nth(bqr_t));
-                    cb.mailbox[bqr_s.to_index()] = None;
-                    cb.mailbox[bqr_t.to_index()] = opt_cpt!(R);
-
-                    //update hash
-                    current_hash ^= ZorbistHash::piece_hash(bqr_s, cpt!(r));
-                    current_hash ^= ZorbistHash::piece_hash(bqr_t, cpt!(r));
-                }
-            }
-        }
-
-        MoveType::EnPassant => {
-            let enemy_pawn_index: usize;
-            let enemy_pawn_square: Square;
-            let enemy_piece: ChessPiece;
-            match cb.side_to_move {
-                Side::White => {
-                    enemy_pawn_index = 11;
-                    enemy_pawn_square = Square::new((target.to_index() - 8) as u8);
-                    enemy_piece = (Side::Black, PieceType::Pawn);
-                }
-                Side::Black => {
-                    enemy_pawn_index = 05;
-                    enemy_pawn_square = Square::new((target.to_index() + 8) as u8);
-                    enemy_piece = (Side::White, PieceType::Pawn);
-                }
-            }
-
-            assert!(cb.piece_bbs[enemy_pawn_index].nth_is_not_zero(enemy_pawn_square));
-            assert!(
-                cb.mailbox[enemy_pawn_square.to_index()] == opt_cpt!(p)
-                    || cb.mailbox[enemy_pawn_square.to_index()] == opt_cpt!(P)
-            );
-
-            cb.piece_bbs[enemy_pawn_index] = cb.piece_bbs[enemy_pawn_index].pop_bit(enemy_pawn_square);
-            current_hash ^= ZorbistHash::piece_hash(enemy_pawn_square, enemy_piece);
-            cb.mailbox[enemy_pawn_square.to_index()] = None;
-        }
-
-        MoveType::Promotion(piece_type) => {
-            let promoted_piece = (cb.side_to_move, piece_type);
-            let promoted_index = cp_index(promoted_piece);
-            //dealing with captures
-            if let Some(target_piece) = target_piece {
-                cb.fifty_move_rule_counter = 0;
-                is_counter_reset = true;
-                current_hash ^= ZorbistHash::piece_hash(target, target_piece);
-
-                //if capturing enemy rook, update castling rights
-                match (target_piece, target.to_u8()) {
-                    (cpt!(R), 00u8) => {
-                        if cb.castle_bools[0] {
-                            current_hash ^= ZorbistHash::castle_hash(Castling::KINGSIDE(Side::White));
-                        }
-                        cb.castle_bools[0] = false;
-                    }
-                    (cpt!(R), 07u8) => {
-                        if cb.castle_bools[1] {
-                            current_hash ^= ZorbistHash::castle_hash(Castling::QUEENSIDE(Side::White));
-                        }
-                        cb.castle_bools[1] = false;
-                    }
-                    (cpt!(r), 56u8) => {
-                        if cb.castle_bools[2] {
-                            current_hash ^= ZorbistHash::castle_hash(Castling::KINGSIDE(Side::Black));
-                        }
-                        cb.castle_bools[2] = false;
-                    }
-                    (cpt!(r), 63u8) => {
-                        if cb.castle_bools[3] {
-                            current_hash ^= ZorbistHash::castle_hash(Castling::QUEENSIDE(Side::Black));
-                        }
-                        cb.castle_bools[3] = false;
-                    }
-                    _ => (),
-                }
-            }
-            //remove the pawn piece
-            cb.piece_bbs[source_index] = cb.piece_bbs[source_index].pop_bit(target);
-            current_hash ^= ZorbistHash::piece_hash(target, source_piece);
-            //add the promoted piece
-            cb.piece_bbs[promoted_index] = cb.piece_bbs[promoted_index].bit_or(&BitBoard::nth(target));
-            current_hash ^= ZorbistHash::piece_hash(target, promoted_piece);
-            cb.mailbox[target.to_index()] = Some(promoted_piece);
-        }
-    }
-
-    cb.side_to_move = cb.side_to_move.update();
-    cb.half_move_counter += 1;
-    cb.full_move_counter = cb.full_move_counter / 2;
-    current_hash ^= ZorbistHash::side_hash();
-
-    cb.enpassant_bb = enpassant_bb;
-    current_hash ^= ZorbistHash::compute_enpassant_hash(enpassant_bb);
-    cb.zorbist_table.add(current_hash);
-    //ChessBoard:
-    //done:      piece_bbs: [BitBoard; 12],
-    //done:      mailbox: [Option<ChessPiece>; 64],
-    //done:      castle_bools: [bool; 4],
-    //done:      enpassant_bb: BitBoard, //pieces triggering en-passant rule
-    //TODO:      attacked_bb: BitBoard, //a mask showing all attacked squares
-    //TODO:      check_bb: BitBoard, //pieces triggering check condition
-    //TODO:      pinned_bb: BitBoard, //pieces that are pinned
-    //done:      side_to_move: Side,
-    //done:      half_move_counter: u16,
-    //done:      full_move_counter: u16,
-    //done:      fifty_move_rule_counter: u16,
-    //done:      zorbist_table: ZorbistTable,
-}
-
 //not const?
 const fn const_update_state(chessboard: &ChessBoard, chess_move: ChessMove) -> ChessBoard {
     let mut chessboard = chessboard.duplicate();
@@ -337,6 +10,98 @@ const fn const_update_state(chessboard: &ChessBoard, chess_move: ChessMove) -> C
     let source_data = chessboard.mailbox[source.to_index()].expect("update_state error: source mailbox is None");
     let source_index = cp_index(source_data);
     let mut current_hash = chessboard.hash();
+    todo!();
+}
+
+fn update_state(chessboard: &mut ChessBoard, chess_move: ChessMove) {
+    //let mut chessboard = chessboard.duplicate();
+    let mut enpassant_bb: BitBoard = BitBoard::ZERO;
+    let source: Square = chess_move.source();
+    let target: Square = chess_move.target();
+    let source_piece = chessboard.mailbox[source.to_index()].expect("update_state error: source mailbox is None");
+    let source_index = cp_index(source_piece);
+    let mut current_hash = chessboard.hash();
+
+    /* special case book keeping */
+    match source_piece {
+        /* castling */
+        (Side::White, PieceType::King) => {
+            chessboard.castle_bools[0] = false;
+            chessboard.castle_bools[1] = false;
+        }
+        (Side::Black, PieceType::King) => {
+            chessboard.castle_bools[2] = false;
+            chessboard.castle_bools[3] = false;
+        }
+        (Side::White, PieceType::Rook) => {
+            //FIXME
+            if source == Square::new(0) {
+                chessboard.castle_bools[0] = false;
+            } else if source == Square::new(7) {
+                chessboard.castle_bools[1] = false
+            }
+        }
+        (Side::Black, PieceType::Rook) => {
+            //FIXME
+            if source == Square::new(56) {
+                chessboard.castle_bools[2] = false;
+            } else if source == Square::new(63) {
+                chessboard.castle_bools[3] = false
+            }
+        }
+        /* en-passant */
+        (Side::White, PieceType::Pawn) => {
+            //reset 50-move rule
+            chessboard.fifty_move_rule_counter = 0;
+            //if move is a 2-square pawn move, update en-passant bitboard
+            if source.to_index() + 16 == target.to_index() {
+                //FIXME Square::new(_) ugliness, logical ugliness
+                if (chessboard.mailbox[target.to_index() + 1] == opt_cpt!(p)
+                    && (chessboard.is_piece_pinned(Square::new(target.to_u8() + 1)) == false)
+                    && (COLS[source.to_index()] != 7))
+                    || chessboard.mailbox[target.to_index() - 1] == opt_cpt!(p)
+                        && (chessboard.is_piece_pinned(Square::new(target.to_u8() - 1)) == false
+                            && (COLS[source.to_index()] != 0))
+                {
+                    enpassant_bb = enpassant_bb.bit_and(&BitBoard::nth(Square::new(target.to_u8() - 8)));
+                }
+            }
+        }
+        (Side::Black, PieceType::Pawn) => {
+            //reset 50-move rule
+            chessboard.fifty_move_rule_counter = 0;
+            //if move is a 2-square pawn move, update en-passant bitboard
+            if source.to_index() == target.to_index() + 16 {
+                //FIXME Square::new(_) ugliness, logical ugliness
+                if (chessboard.mailbox[target.to_index() + 1] == opt_cpt!(p)
+                    && (chessboard.is_piece_pinned(Square::new(target.to_u8() + 1)) == false)
+                    && (COLS[source.to_index()] != 7))
+                    || chessboard.mailbox[target.to_index() - 1] == opt_cpt!(p)
+                        && (chessboard.is_piece_pinned(Square::new(target.to_u8() - 1)) == false
+                            && (COLS[source.to_index()] != 0))
+                {
+                    enpassant_bb = enpassant_bb.bit_and(&BitBoard::nth(Square::new(target.to_u8() - 8)));
+                }
+            }
+        }
+        _ => (),
+    }
+
+    match chess_move.move_type() {
+        MoveType::Normal => (todo!()),
+        MoveType::Castle => todo!(),
+        MoveType::EnPassant => todo!(),
+        MoveType::Promotion(piece_type) => todo!(),
+    }
+
+    // update source bitboard
+    chessboard.piece_bbs[source_index] = chessboard.piece_bbs[source_index].bit_and(&BitBoard::nth(source).bit_not());
+    chessboard.piece_bbs[source_index] = chessboard.piece_bbs[source_index].bit_or(&BitBoard::nth(target));
+
+    //update hash
+    //current_hash.update_hash(source, target, source_piece, target_piece);
+    current_hash ^= ZorbistHash::piece_hash(source, source_piece);
+    current_hash ^= ZorbistHash::piece_hash(target, source_piece);
     todo!();
 }
 

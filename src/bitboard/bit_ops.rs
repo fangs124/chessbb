@@ -1,18 +1,6 @@
-use std::ops::Not;
-
-use std::ops::BitXorAssign;
-
-use std::ops::BitXor;
-
-use std::ops::BitOrAssign;
-
-use std::ops::BitOr;
-
-use std::ops::BitAndAssign;
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
 use super::BitBoard;
-
-use std::ops::BitAnd;
 
 impl BitAnd for BitBoard {
     type Output = BitBoard;

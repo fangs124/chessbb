@@ -167,12 +167,12 @@ impl BitBoard {
     }
 }
 
-pub(crate) const RAYS: [[BitBoard; 64]; 64] = rays();
-
 const W_PAWN_ATTACKS: [BitBoard; 64] = init_pawn_attack(Side::White);
 const B_PAWN_ATTACKS: [BitBoard; 64] = init_pawn_attack(Side::Black);
 const KNIGHT_ATTACKS: [BitBoard; 64] = init_knight_attack();
 const KING_ATTACKS: [BitBoard; 64] = init_king_attack();
+
+pub(crate) const RAYS: [[BitBoard; 64]; 64] = rays();
 
 const fn rays() -> [[BitBoard; 64]; 64] {
     let mut rays: [[BitBoard; 64]; 64] = [[BitBoard::ZERO; 64]; 64];
@@ -197,9 +197,6 @@ const fn rays() -> [[BitBoard; 64]; 64] {
     }
     rays
 }
-
-/* ==== magic ==== */
-
 
 /* ==== constants and supporting functions ==== */
 const ASCII_SYM: [char; 12] = ['K', 'Q', 'N', 'B', 'R', 'P', 'k', 'q', 'n', 'b', 'r', 'p'];

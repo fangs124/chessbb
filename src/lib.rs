@@ -2,7 +2,8 @@ mod bitboard;
 mod chessmove;
 mod movegen;
 mod square;
-use crate::{bitboard::*, square::Square};
+mod zorbist;
+use crate::{bitboard::*, square::Square, zorbist::{ZorbistHash, ZorbistTable}};
 
 /* chessboard specific bitboard functions and definitions*/
 
@@ -12,10 +13,15 @@ pub struct ChessBoard {
     piece_bbs: [BitBoard; 12],
     mailbox: [Option<ChessPiece>; 64],
     castle_bools: [bool; 4],
-    enpassant_bb: BitBoard,
-    check_bb: BitBoard, //piece locations causing the check
+    enpassant_bb: BitBoard, //pieces triggering en-passant rule
+    attacked_bb: BitBoard, //a mask showing all attacked squares
+    check_bb: BitBoard, //pieces triggering check condition
+    pinned_bb: BitBoard, //pieces that are pinned
     side_to_move: Side,
-    half_move_clock: u16,
+    half_move_counter: u16,
+    full_move_counter: u16,
+    fifty_move_rule_counter: u16,
+    zorbist_table: ZorbistTable,
 }
 
 impl Default for ChessBoard {
@@ -53,26 +59,39 @@ impl ChessBoard {
         opt_cpt!(r), opt_cpt!(n), opt_cpt!(b), opt_cpt!(k), opt_cpt!(q), opt_cpt!(b), opt_cpt!(n), opt_cpt!(r),
     ];
 
+    const INITIAL_ATTACKED_BB: BitBoard =       BitBoard::new(0b00000000_00000000_11111111_00000000_00000000_00000000_00000000_00000000);
+
     pub const fn start_pos() -> Self {
         Self {
             piece_bbs: ChessBoard::INITIAL_CHESS_POS,
             mailbox: ChessBoard::INITIAL_MAILBOX,
             castle_bools: [true; 4],
             enpassant_bb: BitBoard::ZERO,
-            side_to_move: Side::White,
+            attacked_bb: ChessBoard::INITIAL_ATTACKED_BB,
             check_bb: BitBoard::ZERO,
-            half_move_clock: 0,
+            pinned_bb: BitBoard::ZERO,
+            side_to_move: Side::White,
+            half_move_counter: 0,
+            full_move_counter: 0,
+            fifty_move_rule_counter: 0,
+            zorbist_table: ZorbistTable::initial_table(),
         }
     }
+
     pub const fn duplicate(&self) -> ChessBoard {
         ChessBoard {
             piece_bbs: self.piece_bbs,
             mailbox: self.mailbox,
             castle_bools: self.castle_bools,
-            enpassant_bb: self.enpassant_bb,
-            side_to_move: self.side_to_move,
-            half_move_clock: self.half_move_clock,
+            enpassant_bb: self.enpassant_bb, //enpassant_bb are pawn-attackable square via en-passant
+            attacked_bb: self.attacked_bb,
             check_bb: self.check_bb,
+            pinned_bb: self.pinned_bb,
+            side_to_move: self.side_to_move,
+            half_move_counter: self.half_move_counter,
+            full_move_counter: self.full_move_counter,
+            fifty_move_rule_counter: self.fifty_move_rule_counter,
+            zorbist_table: self.zorbist_table,
         }
     }
 
@@ -105,6 +124,11 @@ impl ChessBoard {
         }
         return bitboard;
     }
+
+    pub const fn hash(&self) -> ZorbistHash {
+        todo!()
+    }
+
     //TODO maybe is_square_attacked should have parameterized blockers?
     pub const fn is_square_attacked(&self, square: Square, attacker_side: Side) -> bool {
         let blockers = self.blockers();
@@ -128,28 +152,7 @@ impl ChessBoard {
         }
     }
 
-    //pub(crate) const fn is_square_behind_king_attacked(&self, square: Square, side: Side) -> bool {
-    //    let blockers = self.blockers().pop_bit(self.king_square());
-    //    match side {//FIXME maybe can do bit_and, so only one is_not_zero() call?
-    //        Side::White => {
-    //            return (get_b_pawn_attack(square).bit_and(&self.piece_bbs[11])).is_not_zero()
-    //                || (get_rook_attack(square, blockers).bit_and(&self.piece_bbs[10])).is_not_zero()
-    //                || (get_bishop_attack(square, blockers).bit_and(&self.piece_bbs[9])).is_not_zero()
-    //                || (get_knight_attack(square).bit_and(&self.piece_bbs[8])).is_not_zero()
-    //                || (get_queen_attack(square, blockers).bit_and(&self.piece_bbs[7])).is_not_zero()
-    //                || (get_king_attack(square).bit_and(&self.piece_bbs[6])).is_not_zero();
-    //        }
-    //        Side::Black => {
-    //            return (get_b_pawn_attack(square).bit_and(&self.piece_bbs[5])).is_not_zero()
-    //                || (get_rook_attack(square, blockers).bit_and(&self.piece_bbs[4])).is_not_zero()
-    //                || (get_bishop_attack(square, blockers).bit_and(&self.piece_bbs[3])).is_not_zero()
-    //                || (get_knight_attack(square).bit_and(&self.piece_bbs[2])).is_not_zero()
-    //                || (get_queen_attack(square, blockers).bit_and(&self.piece_bbs[1])).is_not_zero()
-    //                || (get_king_attack(square).bit_and(&self.piece_bbs[0])).is_not_zero();
-    //        }
-    //    }
-    //}
-
+    //TODO do something about htis.. currently used to see if a square behind a king is attacked
     pub(crate) const fn is_square_attacked_removed_piece(&self, square: Square, side: Side, removed_square: Square) -> bool {
         let blockers = self.blockers().pop_bit(removed_square);
         match side {//FIXME maybe can do bit_and, so only one is_not_zero() call?

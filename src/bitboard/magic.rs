@@ -221,3 +221,5 @@ const fn rook_attack_mbb() -> [[BitBoard; SIZE_ROOK]; 64] {
 pub(super) const fn magic_index(magic_num: u64, blockers: BitBoard, bitcount: usize) -> usize {
     ((blockers.data.wrapping_mul(magic_num)) >> (64 - bitcount)) as usize
 }
+
+//TODO generate magic numbers instead of using a fixed precalculated values and tables

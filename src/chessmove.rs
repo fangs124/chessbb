@@ -22,6 +22,7 @@ use crate::square::Square;
 0000 0000 00XX XXXX    source square       0x3f
 0000 XXXX XX00 0000    target square       0xfc0
 00XX 0000 0000 0000    promoted piece data 0x3000
+                       castling type
 XX00 0000 0000 0000    move type           0xc000
 
 note: move types are encoded as follows
@@ -34,7 +35,14 @@ note: promoted piece data are encoded as follows
 00 - knight
 01 - bishop
 10 - rook
-11 - queen                                                   */
+11 - queen
+
+note: castling move are encoded as follows
+00 - White Kingside
+01 - White Queenside
+02 - Black Kingside
+03 - Black Queenside
+//                                                           */
 
 //API traits: Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display, Default
 
@@ -61,19 +69,25 @@ pub struct ChessMove {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) enum MoveType {
     Normal,
-    Castle,
+    Castle(Castling),
     EnPassant,
     Promotion(PieceType),
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub(crate) enum Castling {
+    KINGSIDE(Side),
+    QUEENSIDE(Side),
+}
+
 impl ChessMove {
     /* get functions */
-    pub(crate) const fn source(&self) -> usize {
-        ((self.data & 0b000000_111111u16) as usize) >> 0
+    pub(crate) const fn source(&self) -> Square {
+        Square::new(((self.data & 0b000000_111111u16) >> 0) as u8)
     }
 
-    pub(crate) const fn target(&self) -> usize {
-        ((self.data & 0b111111_000000u16) as usize) >> 6
+    pub(crate) const fn target(&self) -> Square {
+        Square::new(((self.data & 0b111111_000000u16) >> 6) as u8)
     }
 
     pub(crate) const fn move_type(&self) -> MoveType {
@@ -84,10 +98,16 @@ impl ChessMove {
             0b11 => PieceType::Queen,
             _ => unreachable!(),
         };
-
+        let castling: Castling = match ((self.data & 0b11_000000_000000u16) as usize) >> 12 {
+            0b00 => Castling::KINGSIDE(Side::White),
+            0b01 => Castling::QUEENSIDE(Side::White),
+            0b10 => Castling::KINGSIDE(Side::Black),
+            0b11 => Castling::QUEENSIDE(Side::Black),
+            _ => unreachable!(),
+        };
         match ((self.data & 0b11_00_000000_000000) as usize) >> 14 {
             0 => MoveType::Normal,
-            1 => MoveType::Castle,
+            1 => MoveType::Castle(castling),
             2 => MoveType::EnPassant,
             3 => MoveType::Promotion(piece),
             _ => unreachable!(),
@@ -112,7 +132,10 @@ impl ChessMove {
 
         let move_type_data: usize = match m {
             MoveType::Normal => 0b00_00,
-            MoveType::Castle => 0b01_00,
+            MoveType::Castle(Castling::KINGSIDE(Side::White)) => 0b01_00,
+            MoveType::Castle(Castling::QUEENSIDE(Side::White)) => 0b01_01,
+            MoveType::Castle(Castling::KINGSIDE(Side::Black)) => 0b01_10,
+            MoveType::Castle(Castling::QUEENSIDE(Side::Black)) => 0b01_11,
             MoveType::EnPassant => 0b10_00,
             MoveType::Promotion(PieceType::Knight) => 0b11_00,
             MoveType::Promotion(PieceType::Bishop) => 0b11_01,
@@ -134,12 +157,24 @@ impl ChessMove {
         ];
     }
 
-    pub(crate) const W_KINGSIDE_CASTLE: ChessMove =
-        ChessMove::new(Square::W_KING_SQUARE, Square::W_KINGSIDE_CASTLE_SQUARE, MoveType::Castle);
-    pub(crate) const W_QUEENSIDE_CASTLE: ChessMove =
-        ChessMove::new(Square::W_KING_SQUARE, Square::W_QUEENSIDE_CASTLE_SQUARE, MoveType::Castle);
-    pub(crate) const B_KINGSIDE_CASTLE: ChessMove =
-        ChessMove::new(Square::B_KING_SQUARE, Square::B_KINGSIDE_CASTLE_SQUARE, MoveType::Castle);
-    pub(crate) const B_QUEENSIDE_CASTLE: ChessMove =
-        ChessMove::new(Square::B_KING_SQUARE, Square::B_QUEENSIDE_CASTLE_SQUARE, MoveType::Castle);
+    pub(crate) const W_KINGSIDE_CASTLE: ChessMove = ChessMove::new(
+        Square::W_KING_SQUARE,
+        Square::W_KINGSIDE_CASTLE_SQUARE,
+        MoveType::Castle(Castling::KINGSIDE(Side::White)),
+    );
+    pub(crate) const W_QUEENSIDE_CASTLE: ChessMove = ChessMove::new(
+        Square::W_KING_SQUARE,
+        Square::W_QUEENSIDE_CASTLE_SQUARE,
+        MoveType::Castle(Castling::QUEENSIDE(Side::White)),
+    );
+    pub(crate) const B_KINGSIDE_CASTLE: ChessMove = ChessMove::new(
+        Square::B_KING_SQUARE,
+        Square::B_KINGSIDE_CASTLE_SQUARE,
+        MoveType::Castle(Castling::KINGSIDE(Side::Black)),
+    );
+    pub(crate) const B_QUEENSIDE_CASTLE: ChessMove = ChessMove::new(
+        Square::B_KING_SQUARE,
+        Square::B_QUEENSIDE_CASTLE_SQUARE,
+        MoveType::Castle(Castling::QUEENSIDE(Side::Black)),
+    );
 }
