@@ -1,79 +1,6 @@
 use super::chessmove::*;
 use super::*;
 
-impl ChessBoard {
-    const fn compute_check_bb(&mut self) {
-        let blockers: BitBoard = self.blockers();
-        let king_index: usize;
-        let king_square: Square;
-        match self.side_to_move {
-            Side::White => {
-                king_index = 0;
-                assert!(self.piece_bbs[king_index].count_ones() == 1);
-                king_square = self.piece_bbs[king_index].lsb_square().unwrap();
-
-                let queen_bb = self.piece_bbs[07].bit_and(&get_queen_attack(king_square, blockers));
-                let knight_bb = self.piece_bbs[08].bit_and(&get_knight_attack(king_square));
-                let bishop_bb = self.piece_bbs[09].bit_and(&get_bishop_attack(king_square, blockers));
-                let rook_bb = self.piece_bbs[10].bit_and(&get_rook_attack(king_square, blockers));
-                let pawn_bb = self.piece_bbs[11].bit_and(&get_b_pawn_attack(king_square));
-                self.check_bb = queen_bb.bit_or(&knight_bb.bit_or(&bishop_bb.bit_or(&rook_bb.bit_or(&pawn_bb))));
-            }
-
-            Side::Black => {
-                king_index = 6;
-                assert!(self.piece_bbs[king_index].count_ones() == 1);
-                king_square = self.piece_bbs[king_index].lsb_square().unwrap();
-
-                let queen_bb = self.piece_bbs[01].bit_and(&get_queen_attack(king_square, blockers));
-                let knight_bb = self.piece_bbs[02].bit_and(&get_knight_attack(king_square));
-                let bishop_bb = self.piece_bbs[03].bit_and(&get_bishop_attack(king_square, blockers));
-                let rook_bb = self.piece_bbs[04].bit_and(&get_rook_attack(king_square, blockers));
-                let pawn_bb = self.piece_bbs[05].bit_and(&get_w_pawn_attack(king_square));
-                self.check_bb = queen_bb.bit_or(&knight_bb.bit_or(&bishop_bb.bit_or(&rook_bb.bit_or(&pawn_bb))));
-            }
-        }
-    }
-
-    pub(crate) const fn compute_pin_bb(&mut self) {
-        let mut pinner_bb: BitBoard = BitBoard::ZERO;
-        let mut pinned_bb: BitBoard = BitBoard::ZERO;
-
-        let friends: BitBoard;
-        let enemies: BitBoard;
-        let blockers: BitBoard = self.blockers();
-        let king_index: usize;
-        let king_square: Square;
-
-        match self.side_to_move {
-            Side::White => {
-                friends = self.white_blockers();
-                enemies = self.black_blockers();
-                king_index = 0;
-            }
-            Side::Black => {
-                friends = self.black_blockers();
-                enemies = self.white_blockers();
-                king_index = 6;
-            }
-        }
-        assert!(self.piece_bbs[king_index].count_ones() == 1);
-        king_square = self.piece_bbs[king_index].lsb_square().unwrap();
-        let mut possible_pinners = get_queen_attack(king_square, enemies);
-        while possible_pinners.is_not_zero() {
-            let possible_pinner = possible_pinners.lsb_square().unwrap();
-            let possible_pinned = RAYS[king_square.to_index()][possible_pinner.to_index()].bit_and(&friends);
-            if possible_pinned.count_ones() == 1 {
-                pinner_bb = pinner_bb.bit_or(&BitBoard::nth(possible_pinner));
-                pinned_bb = pinned_bb.bit_or(&possible_pinned);
-            }
-            possible_pinners = possible_pinners.pop_bit(possible_pinner);
-        }
-        self.pinned_bb = pinned_bb;
-        self.pinner_bb = pinner_bb;
-    }
-}
-
 fn update_state(cb: &mut ChessBoard, chess_move: ChessMove) {
     let mut enpassant_bb: BitBoard = BitBoard::ZERO;
     let source: Square = chess_move.source();
@@ -86,7 +13,7 @@ fn update_state(cb: &mut ChessBoard, chess_move: ChessMove) {
         None => None,
     };
 
-    let mut current_hash = cb.hash();
+    let mut current_hash = cb.current_hash();
     current_hash ^= ZorbistHash::compute_enpassant_hash(cb.enpassant_bb);
 
     let mut is_counter_reset: bool = false; //fifty-move-rule counter
@@ -196,7 +123,6 @@ fn update_state(cb: &mut ChessBoard, chess_move: ChessMove) {
         MoveType::Normal => {
             //dealing with captures
             if let Some(target_piece) = target_piece {
-                is_counter_reset = true;
                 current_hash ^= ZorbistHash::piece_hash(target, target_piece);
 
                 //reset 50-move rule
@@ -235,70 +161,62 @@ fn update_state(cb: &mut ChessBoard, chess_move: ChessMove) {
         }
 
         MoveType::Castle(castling) => {
-            //let white_kingside_rook_sq_source: Square = Square::new(00);
-            //let white_kingside_rook_sq_target: Square = Square::new(02);
-            //let white_queenside_rook_sq_source: Square = Square::new(07);
-            //let white_queenside_rook_sq_target: Square = Square::new(04);
-            //let black_kingside_rook_sq_source: Square = Square::new(56);
-            //let black_kingside_rook_sq_target: Square = Square::new(58);
-            //let black_queenside_rook_sq_source: Square = Square::new(63);
-            //let black_queenside_rook_sq_target: Square = Square::new(60);
-            let wkr_s: Square = Square::new(00);
-            let wkr_t: Square = Square::new(02);
-            let wqr_s: Square = Square::new(07);
-            let wqr_t: Square = Square::new(04);
-            let bkr_s: Square = Square::new(56);
-            let bkr_t: Square = Square::new(58);
-            let bqr_s: Square = Square::new(63);
-            let bqr_t: Square = Square::new(60);
+            let white_kingside_rook_sq_source: Square = Square::new(00);
+            let white_kingside_rook_sq_target: Square = Square::new(02);
+            let white_queenside_rook_sq_source: Square = Square::new(07);
+            let white_queenside_rook_sq_target: Square = Square::new(04);
+            let black_kingside_rook_sq_source: Square = Square::new(56);
+            let black_kingside_rook_sq_target: Square = Square::new(58);
+            let black_queenside_rook_sq_source: Square = Square::new(63);
+            let black_queenside_rook_sq_target: Square = Square::new(60);
             match castling {
                 Castling::KINGSIDE(Side::White) => {
                     // check if rook is present
-                    assert!(cb.piece_bbs[04].nth_is_not_zero(wkr_s));
-                    cb.piece_bbs[04] = cb.piece_bbs[04].pop_bit(wkr_s);
-                    cb.piece_bbs[04] = cb.piece_bbs[04].bit_or(&BitBoard::nth(wkr_t));
-                    cb.mailbox[wkr_s.to_index()] = None;
-                    cb.mailbox[wkr_t.to_index()] = opt_cpt!(R);
+                    assert!(cb.piece_bbs[04].nth_is_not_zero(white_kingside_rook_sq_source));
+                    cb.piece_bbs[04] = cb.piece_bbs[04].pop_bit(white_kingside_rook_sq_source);
+                    cb.piece_bbs[04] = cb.piece_bbs[04].bit_or(&BitBoard::nth(white_kingside_rook_sq_target));
+                    cb.mailbox[white_kingside_rook_sq_source.to_index()] = None;
+                    cb.mailbox[white_kingside_rook_sq_target.to_index()] = opt_cpt!(R);
 
                     //update hash
-                    current_hash ^= ZorbistHash::piece_hash(wkr_s, cpt!(R));
-                    current_hash ^= ZorbistHash::piece_hash(wkr_t, cpt!(R));
+                    current_hash ^= ZorbistHash::piece_hash(white_kingside_rook_sq_source, cpt!(R));
+                    current_hash ^= ZorbistHash::piece_hash(white_kingside_rook_sq_target, cpt!(R));
                 }
                 Castling::QUEENSIDE(Side::White) => {
                     // check if rook is present
-                    assert!(cb.piece_bbs[04].nth_is_not_zero(wqr_s));
-                    cb.piece_bbs[04] = cb.piece_bbs[04].pop_bit(wqr_s);
-                    cb.piece_bbs[04] = cb.piece_bbs[04].bit_or(&BitBoard::nth(wqr_t));
-                    cb.mailbox[wqr_s.to_index()] = None;
-                    cb.mailbox[wqr_t.to_index()] = opt_cpt!(R);
+                    assert!(cb.piece_bbs[04].nth_is_not_zero(white_queenside_rook_sq_source));
+                    cb.piece_bbs[04] = cb.piece_bbs[04].pop_bit(white_queenside_rook_sq_source);
+                    cb.piece_bbs[04] = cb.piece_bbs[04].bit_or(&BitBoard::nth(white_queenside_rook_sq_target));
+                    cb.mailbox[white_queenside_rook_sq_source.to_index()] = None;
+                    cb.mailbox[white_queenside_rook_sq_target.to_index()] = opt_cpt!(R);
 
                     //update hash
-                    current_hash ^= ZorbistHash::piece_hash(wqr_s, cpt!(R));
-                    current_hash ^= ZorbistHash::piece_hash(wqr_t, cpt!(R));
+                    current_hash ^= ZorbistHash::piece_hash(white_queenside_rook_sq_source, cpt!(R));
+                    current_hash ^= ZorbistHash::piece_hash(white_queenside_rook_sq_target, cpt!(R));
                 }
                 Castling::KINGSIDE(Side::Black) => {
                     // check if rook is present
-                    assert!(cb.piece_bbs[10].nth_is_not_zero(bkr_s));
-                    cb.piece_bbs[10] = cb.piece_bbs[10].pop_bit(bkr_s);
-                    cb.piece_bbs[10] = cb.piece_bbs[10].bit_or(&BitBoard::nth(bkr_t));
-                    cb.mailbox[bkr_s.to_index()] = None;
-                    cb.mailbox[bkr_t.to_index()] = opt_cpt!(R);
+                    assert!(cb.piece_bbs[10].nth_is_not_zero(black_kingside_rook_sq_source));
+                    cb.piece_bbs[10] = cb.piece_bbs[10].pop_bit(black_kingside_rook_sq_source);
+                    cb.piece_bbs[10] = cb.piece_bbs[10].bit_or(&BitBoard::nth(black_kingside_rook_sq_target));
+                    cb.mailbox[black_kingside_rook_sq_source.to_index()] = None;
+                    cb.mailbox[black_kingside_rook_sq_target.to_index()] = opt_cpt!(R);
 
                     //update hash
-                    current_hash ^= ZorbistHash::piece_hash(bkr_s, cpt!(r));
-                    current_hash ^= ZorbistHash::piece_hash(bkr_t, cpt!(r));
+                    current_hash ^= ZorbistHash::piece_hash(black_kingside_rook_sq_source, cpt!(r));
+                    current_hash ^= ZorbistHash::piece_hash(black_kingside_rook_sq_target, cpt!(r));
                 }
                 Castling::QUEENSIDE(Side::Black) => {
                     // check if rook is present
-                    assert!(cb.piece_bbs[10].nth_is_not_zero(bqr_s));
-                    cb.piece_bbs[10] = cb.piece_bbs[10].pop_bit(bqr_s);
-                    cb.piece_bbs[10] = cb.piece_bbs[10].bit_or(&BitBoard::nth(bqr_t));
-                    cb.mailbox[bqr_s.to_index()] = None;
-                    cb.mailbox[bqr_t.to_index()] = opt_cpt!(R);
+                    assert!(cb.piece_bbs[10].nth_is_not_zero(black_queenside_rook_sq_source));
+                    cb.piece_bbs[10] = cb.piece_bbs[10].pop_bit(black_queenside_rook_sq_source);
+                    cb.piece_bbs[10] = cb.piece_bbs[10].bit_or(&BitBoard::nth(black_queenside_rook_sq_target));
+                    cb.mailbox[black_queenside_rook_sq_source.to_index()] = None;
+                    cb.mailbox[black_queenside_rook_sq_target.to_index()] = opt_cpt!(R);
 
                     //update hash
-                    current_hash ^= ZorbistHash::piece_hash(bqr_s, cpt!(r));
-                    current_hash ^= ZorbistHash::piece_hash(bqr_t, cpt!(r));
+                    current_hash ^= ZorbistHash::piece_hash(black_queenside_rook_sq_source, cpt!(r));
+                    current_hash ^= ZorbistHash::piece_hash(black_queenside_rook_sq_target, cpt!(r));
                 }
             }
         }
@@ -334,6 +252,7 @@ fn update_state(cb: &mut ChessBoard, chess_move: ChessMove) {
         MoveType::Promotion(piece_type) => {
             let promoted_piece = (cb.side_to_move, piece_type);
             let promoted_index = cp_index(promoted_piece);
+
             //dealing with captures
             if let Some(target_piece) = target_piece {
                 cb.fifty_move_rule_counter = 0;
@@ -383,50 +302,29 @@ fn update_state(cb: &mut ChessBoard, chess_move: ChessMove) {
     cb.half_move_counter += 1;
     cb.full_move_counter = cb.full_move_counter / 2;
     current_hash ^= ZorbistHash::side_hash();
-
+    if is_counter_reset == false {
+        cb.fifty_move_rule_counter += 1;
+    }
     cb.enpassant_bb = enpassant_bb;
     current_hash ^= ZorbistHash::compute_enpassant_hash(enpassant_bb);
     cb.zorbist_table.add(current_hash);
     cb.compute_check_bb();
+    cb.compute_check_mask();
     cb.compute_pin_bb();
-    //ChessBoard:
-    //done:      piece_bbs: [BitBoard; 12],
-    //done:      mailbox: [Option<ChessPiece>; 64],
-    //done:      castle_bools: [bool; 4],
-    //done:      enpassant_bb: BitBoard, //pieces triggering en-passant rule
-    //????:      attacked_bb: BitBoard, //a mask showing all attacked squares
-    //done:      check_bb: BitBoard, //pieces triggering check condition
-    //done:      pinned_bb: BitBoard, //pieces that are pinned
-    //done:      pinner_bb: BitBoard, //pieces doing the pin
-    //done:      side_to_move: Side,
-    //done:      half_move_counter: u16,
-    //done:      full_move_counter: u16,
-    //done:      fifty_move_rule_counter: u16,
-    //done:      zorbist_table: ZorbistTable,
-}
-
-//not const?
-const fn const_update_state(chessboard: &ChessBoard, chess_move: ChessMove) -> ChessBoard {
-    let mut chessboard = chessboard.duplicate();
-    let mut enpassant_bb: BitBoard = BitBoard::ZERO;
-    let source: Square = chess_move.source();
-    let target: Square = chess_move.target();
-    let source_data = chessboard.mailbox[source.to_index()].expect("update_state error: source mailbox is None");
-    let source_index = cp_index(source_data);
-    let mut current_hash = chessboard.hash();
-    todo!();
 }
 
 fn generate_moves(chessboard: &ChessBoard) -> Vec<ChessMove> {
     let mut moves: Vec<ChessMove> = Vec::new();
+
     //if three fold repetition, return empty set of moves
-    //TODO
+    if chessboard.count_hash(chessboard.current_hash()) >= 3 {
+        return moves;
+    }
 
     let side = chessboard.side_to_move;
 
     // consider if king is in check
-    // calculates all the sources attacked by enemy's checking pieces
-    let check_mask: BitBoard = chessboard.check_mask();
+    let check_mask: BitBoard = chessboard.check_mask;
     let checkers_count = chessboard.check_bb.count_ones();
 
     for &piece_type in PieceType::iterator() {
@@ -434,12 +332,13 @@ fn generate_moves(chessboard: &ChessBoard) -> Vec<ChessMove> {
         if checkers_count >= 2 && piece_type != PieceType::King {
             continue;
         }
-        // if single check => king move, piece blocks, capture checker
 
         let mut sources = chessboard.piece_bb((side, piece_type));
         while sources.is_not_zero() {
             let source: Square = sources.lsb_square().unwrap();
-            let (pinners, pin_mask) = chessboard.calculate_pin_data(source);
+            let pinner_pieces = chessboard.pinner_bb;
+            let pinned_pieces = chessboard.pinned_bb;
+
             match piece_type {
                 PieceType::King => {
                     /* castling */
@@ -461,38 +360,40 @@ fn generate_moves(chessboard: &ChessBoard) -> Vec<ChessMove> {
                         }
                     }
                     /* moves and attacks */
-                    moves.append(&mut calculate_attacks(chessboard, source, piece_type, pin_mask, check_mask));
+                    moves.append(&mut calculate_attacks(chessboard, source, piece_type));
                 }
+
                 PieceType::Knight => {
                     // pinned knights can not move
-                    if pin_mask.is_not_zero() {
+                    if (pinned_pieces.bit_and(&chessboard.piece_bbs[cp_index((side, piece_type))])).is_not_zero() {
                         sources = sources.pop_bit(source);
                         continue;
                     }
-                    //TODO this might be a source of error
-                    moves.append(&mut calculate_attacks(chessboard, source, piece_type, pin_mask, check_mask));
+
+                    moves.append(&mut calculate_attacks(chessboard, source, piece_type));
                 }
-                PieceType::Pawn => {
-                    moves.append(&mut calculate_pawn_moves(chessboard, source, pinners, pin_mask, check_mask))
-                }
-                _ => moves.append(&mut calculate_attacks(chessboard, source, piece_type, pin_mask, check_mask)),
+
+                PieceType::Pawn => moves.append(&mut calculate_pawn_moves(chessboard, source)),
+
+                _ => moves.append(&mut calculate_attacks(chessboard, source, piece_type)),
             }
             sources = sources.pop_bit(source);
         }
     }
-    //
-    todo!();
+    return moves;
 }
 
-fn calculate_attacks(cb: &ChessBoard, s: Square, p: PieceType, p_m: BitBoard, c_m: BitBoard) -> Vec<ChessMove> {
+fn calculate_attacks(cb: &ChessBoard, s: Square, p: PieceType) -> Vec<ChessMove> {
+    //pawn rules are complex, best handled separately, use calculate_pawn_moves(...)
+    assert!(p != PieceType::Pawn);
+
     let source = s;
     let piece_type = p;
     let side = cb.side_to_move;
     let friends: BitBoard;
     let enemies: BitBoard;
     let blockers: BitBoard = cb.blockers();
-    let pin_mask = p_m;
-    let check_mask = c_m;
+    let check_mask = cb.check_mask;
     match side {
         Side::White => {
             friends = cb.white_blockers();
@@ -517,30 +418,19 @@ fn calculate_attacks(cb: &ChessBoard, s: Square, p: PieceType, p_m: BitBoard, c_
         },
     };
 
-    //pawn rules are complex, best handled separately
-    assert!(piece_type != PieceType::Pawn);
-
     while targets.is_not_zero() {
         let target = targets.lsb_square().unwrap();
 
-        //just in case...
-        assert!(piece_type != PieceType::Pawn);
-        assert!(piece_type != PieceType::Knight || pin_mask.is_zero());
-
-        //NOTE (special cases)
         //king: cannot move to a square under attack
         if piece_type == PieceType::King && cb.is_square_attacked_removed_piece(target, side, cb.king_square()) {
             targets = targets.pop_bit(target);
             continue;
         };
 
-        //logic here
-        //pinned logic
         //only consider moves along pinning ray if pinned
+        let pin_mask = cb.pin_mask(source);
         if pin_mask.is_not_zero() && pin_mask.nth_is_zero(target) {
             targets = targets.pop_bit(target);
-            //FIXME is this necessary?
-            //assert!(piece_type != PieceType::Knight);
             continue;
         }
 
@@ -558,13 +448,16 @@ fn calculate_attacks(cb: &ChessBoard, s: Square, p: PieceType, p_m: BitBoard, c_
     return moves;
 }
 
-fn calculate_pawn_moves(
-    chessboard: &ChessBoard,
-    source: Square,
-    pinners: BitBoard,
-    pin_mask: BitBoard,
-    check_mask: BitBoard,
-) -> Vec<ChessMove> {
+fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
+    //chessboard: &ChessBoard,
+    //source: Square,
+    //pinners: BitBoard,
+    //check_mask: BitBoard,
+    let chessboard = cb;
+    let source = s;
+    let pinners = cb.pinner_bb;
+    let pin_mask = cb.pin_mask(source);
+    let check_mask = cb.check_mask;
     let king_square = chessboard.king_square();
     let blockers = chessboard.blockers();
     let side = chessboard.side_to_move;
@@ -738,4 +631,95 @@ fn calculate_pawn_moves(
         }
     }
     return moves;
+}
+
+impl ChessBoard {
+    const fn compute_check_bb(&mut self) {
+        let blockers: BitBoard = self.blockers();
+        let king_index: usize;
+        let king_square: Square;
+        match self.side_to_move {
+            Side::White => {
+                king_index = 0;
+                assert!(self.piece_bbs[king_index].count_ones() == 1);
+                king_square = self.piece_bbs[king_index].lsb_square().unwrap();
+
+                let queen_bb = self.piece_bbs[07].bit_and(&get_queen_attack(king_square, blockers));
+                let knight_bb = self.piece_bbs[08].bit_and(&get_knight_attack(king_square));
+                let bishop_bb = self.piece_bbs[09].bit_and(&get_bishop_attack(king_square, blockers));
+                let rook_bb = self.piece_bbs[10].bit_and(&get_rook_attack(king_square, blockers));
+                let pawn_bb = self.piece_bbs[11].bit_and(&get_b_pawn_attack(king_square));
+                self.check_bb = queen_bb.bit_or(&knight_bb.bit_or(&bishop_bb.bit_or(&rook_bb.bit_or(&pawn_bb))));
+            }
+
+            Side::Black => {
+                king_index = 6;
+                assert!(self.piece_bbs[king_index].count_ones() == 1);
+                king_square = self.piece_bbs[king_index].lsb_square().unwrap();
+
+                let queen_bb = self.piece_bbs[01].bit_and(&get_queen_attack(king_square, blockers));
+                let knight_bb = self.piece_bbs[02].bit_and(&get_knight_attack(king_square));
+                let bishop_bb = self.piece_bbs[03].bit_and(&get_bishop_attack(king_square, blockers));
+                let rook_bb = self.piece_bbs[04].bit_and(&get_rook_attack(king_square, blockers));
+                let pawn_bb = self.piece_bbs[05].bit_and(&get_w_pawn_attack(king_square));
+                self.check_bb = queen_bb.bit_or(&knight_bb.bit_or(&bishop_bb.bit_or(&rook_bb.bit_or(&pawn_bb))));
+            }
+        }
+    }
+
+    const fn compute_pin_bb(&mut self) {
+        let mut pinner_bb: BitBoard = BitBoard::ZERO;
+        let mut pinned_bb: BitBoard = BitBoard::ZERO;
+
+        let friends: BitBoard;
+        let enemies: BitBoard;
+        let blockers: BitBoard = self.blockers();
+        let king_index: usize;
+        let king_square: Square;
+
+        match self.side_to_move {
+            Side::White => {
+                friends = self.white_blockers();
+                enemies = self.black_blockers();
+                king_index = 0;
+            }
+            Side::Black => {
+                friends = self.black_blockers();
+                enemies = self.white_blockers();
+                king_index = 6;
+            }
+        }
+        assert!(self.piece_bbs[king_index].count_ones() == 1);
+        king_square = self.piece_bbs[king_index].lsb_square().unwrap();
+        let mut possible_pinners = get_queen_attack(king_square, enemies);
+        while possible_pinners.is_not_zero() {
+            let possible_pinner = possible_pinners.lsb_square().unwrap();
+            let possible_pinned = RAYS[king_square.to_index()][possible_pinner.to_index()].bit_and(&friends);
+            if possible_pinned.count_ones() == 1 {
+                pinner_bb = pinner_bb.bit_or(&BitBoard::nth(possible_pinner));
+                pinned_bb = pinned_bb.bit_or(&possible_pinned);
+            }
+            possible_pinners = possible_pinners.pop_bit(possible_pinner);
+        }
+        self.pinned_bb = pinned_bb;
+        self.pinner_bb = pinner_bb;
+    }
+
+    // calculates all the squares attacked by enemy's checking pieces
+    fn compute_check_mask(&mut self) {
+        let mut check_bb: BitBoard = self.check_bb;
+        let mut check_mask = check_bb;
+        while check_bb.is_not_zero() {
+            let checker_square = check_bb.lsb_square().unwrap();
+            match self.mailbox[checker_square.to_index()].expect("generate_moves: checker mailbox is empty") {
+                cpt!(K) | cpt!(k) => panic!("generate_moves: king is in check by another king!"),
+                cpt!(N) | cpt!(n) => continue,
+                _ => {
+                    check_mask = check_mask.bit_or(&RAYS[checker_square.to_index()][self.king_square().to_index()]);
+                }
+            }
+            check_bb = check_bb.pop_bit(checker_square);
+        }
+        self.check_mask = check_mask;
+    }
 }

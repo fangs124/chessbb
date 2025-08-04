@@ -20,17 +20,33 @@ impl ZorbistTable {
     pub(super) const fn new(hash: ZorbistHash) -> ZorbistTable {
         let mut data: [ZorbistHash; 1 << 14] = [ZorbistHash { value: 0 }; 1 << 14];
         data[0] = hash;
-        ZorbistTable { data, index: 1 }
+        ZorbistTable { data, index: 0 }
     }
 
     pub(super) const fn initial_table() -> ZorbistTable {
         ZorbistTable::new(ZorbistHash::initial_hash())
     }
 
-    pub(super) fn add(&mut self, hash: ZorbistHash) {
-        self.data[self.index] = hash;
-        self.index += 1;
+    pub(super) const fn add(&mut self, hash: ZorbistHash) {
         assert!(self.index < (1 << 14));
+        self.index += 1;
+        self.data[self.index] = hash;
+    }
+
+    pub(super) const fn last_hash(&self) -> ZorbistHash {
+        self.data[self.index]
+    }
+
+    pub(super) const fn count_hash(&self, hash: ZorbistHash) -> usize {
+        let mut i: usize = 0;
+        let mut count: usize = 0;
+        while i <= self.index {
+            if self.data[i].value == hash.value {
+                count += 1;
+            }
+            i += 1
+        }
+        return count;
     }
 }
 
