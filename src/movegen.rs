@@ -1,6 +1,79 @@
 use super::chessmove::*;
 use super::*;
 
+impl ChessBoard {
+    const fn compute_check_bb(&mut self) {
+        let blockers: BitBoard = self.blockers();
+        let king_index: usize;
+        let king_square: Square;
+        match self.side_to_move {
+            Side::White => {
+                king_index = 0;
+                assert!(self.piece_bbs[king_index].count_ones() == 1);
+                king_square = self.piece_bbs[king_index].lsb_square().unwrap();
+
+                let queen_bb = self.piece_bbs[07].bit_and(&get_queen_attack(king_square, blockers));
+                let knight_bb = self.piece_bbs[08].bit_and(&get_knight_attack(king_square));
+                let bishop_bb = self.piece_bbs[09].bit_and(&get_bishop_attack(king_square, blockers));
+                let rook_bb = self.piece_bbs[10].bit_and(&get_rook_attack(king_square, blockers));
+                let pawn_bb = self.piece_bbs[11].bit_and(&get_b_pawn_attack(king_square));
+                self.check_bb = queen_bb.bit_or(&knight_bb.bit_or(&bishop_bb.bit_or(&rook_bb.bit_or(&pawn_bb))));
+            }
+
+            Side::Black => {
+                king_index = 6;
+                assert!(self.piece_bbs[king_index].count_ones() == 1);
+                king_square = self.piece_bbs[king_index].lsb_square().unwrap();
+
+                let queen_bb = self.piece_bbs[01].bit_and(&get_queen_attack(king_square, blockers));
+                let knight_bb = self.piece_bbs[02].bit_and(&get_knight_attack(king_square));
+                let bishop_bb = self.piece_bbs[03].bit_and(&get_bishop_attack(king_square, blockers));
+                let rook_bb = self.piece_bbs[04].bit_and(&get_rook_attack(king_square, blockers));
+                let pawn_bb = self.piece_bbs[05].bit_and(&get_w_pawn_attack(king_square));
+                self.check_bb = queen_bb.bit_or(&knight_bb.bit_or(&bishop_bb.bit_or(&rook_bb.bit_or(&pawn_bb))));
+            }
+        }
+    }
+
+    pub(crate) const fn compute_pin_bb(&mut self) {
+        let mut pinner_bb: BitBoard = BitBoard::ZERO;
+        let mut pinned_bb: BitBoard = BitBoard::ZERO;
+
+        let friends: BitBoard;
+        let enemies: BitBoard;
+        let blockers: BitBoard = self.blockers();
+        let king_index: usize;
+        let king_square: Square;
+
+        match self.side_to_move {
+            Side::White => {
+                friends = self.white_blockers();
+                enemies = self.black_blockers();
+                king_index = 0;
+            }
+            Side::Black => {
+                friends = self.black_blockers();
+                enemies = self.white_blockers();
+                king_index = 6;
+            }
+        }
+        assert!(self.piece_bbs[king_index].count_ones() == 1);
+        king_square = self.piece_bbs[king_index].lsb_square().unwrap();
+        let mut possible_pinners = get_queen_attack(king_square, enemies);
+        while possible_pinners.is_not_zero() {
+            let possible_pinner = possible_pinners.lsb_square().unwrap();
+            let possible_pinned = RAYS[king_square.to_index()][possible_pinner.to_index()].bit_and(&friends);
+            if possible_pinned.count_ones() == 1 {
+                pinner_bb = pinner_bb.bit_or(&BitBoard::nth(possible_pinner));
+                pinned_bb = pinned_bb.bit_or(&possible_pinned);
+            }
+            possible_pinners = possible_pinners.pop_bit(possible_pinner);
+        }
+        self.pinned_bb = pinned_bb;
+        self.pinner_bb = pinner_bb;
+    }
+}
+
 fn update_state(cb: &mut ChessBoard, chess_move: ChessMove) {
     let mut enpassant_bb: BitBoard = BitBoard::ZERO;
     let source: Square = chess_move.source();
@@ -118,6 +191,7 @@ fn update_state(cb: &mut ChessBoard, chess_move: ChessMove) {
     cb.mailbox[source.to_index()] = None;
     cb.mailbox[target.to_index()] = Some(source_piece);
 
+    //additional book keeping
     match chess_move.move_type() {
         MoveType::Normal => {
             //dealing with captures
@@ -313,14 +387,17 @@ fn update_state(cb: &mut ChessBoard, chess_move: ChessMove) {
     cb.enpassant_bb = enpassant_bb;
     current_hash ^= ZorbistHash::compute_enpassant_hash(enpassant_bb);
     cb.zorbist_table.add(current_hash);
+    cb.compute_check_bb();
+    cb.compute_pin_bb();
     //ChessBoard:
     //done:      piece_bbs: [BitBoard; 12],
     //done:      mailbox: [Option<ChessPiece>; 64],
     //done:      castle_bools: [bool; 4],
     //done:      enpassant_bb: BitBoard, //pieces triggering en-passant rule
-    //TODO:      attacked_bb: BitBoard, //a mask showing all attacked squares
-    //TODO:      check_bb: BitBoard, //pieces triggering check condition
-    //TODO:      pinned_bb: BitBoard, //pieces that are pinned
+    //????:      attacked_bb: BitBoard, //a mask showing all attacked squares
+    //done:      check_bb: BitBoard, //pieces triggering check condition
+    //done:      pinned_bb: BitBoard, //pieces that are pinned
+    //done:      pinner_bb: BitBoard, //pieces doing the pin
     //done:      side_to_move: Side,
     //done:      half_move_counter: u16,
     //done:      full_move_counter: u16,

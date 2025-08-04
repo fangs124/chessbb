@@ -14,9 +14,10 @@ pub struct ChessBoard {
     mailbox: [Option<ChessPiece>; 64],
     castle_bools: [bool; 4],
     enpassant_bb: BitBoard, //pieces triggering en-passant rule
-    attacked_bb: BitBoard, //a mask showing all attacked squares
+    //attacked_bb: BitBoard, //a mask showing all attacked squares (do I need this?)
     check_bb: BitBoard, //pieces triggering check condition
     pinned_bb: BitBoard, //pieces that are pinned
+    pinner_bb: BitBoard, //pieces doing the pin
     side_to_move: Side,
     half_move_counter: u16,
     full_move_counter: u16,
@@ -67,9 +68,10 @@ impl ChessBoard {
             mailbox: ChessBoard::INITIAL_MAILBOX,
             castle_bools: [true; 4],
             enpassant_bb: BitBoard::ZERO,
-            attacked_bb: ChessBoard::INITIAL_ATTACKED_BB,
+            //attacked_bb: ChessBoard::INITIAL_ATTACKED_BB,
             check_bb: BitBoard::ZERO,
             pinned_bb: BitBoard::ZERO,
+            pinner_bb: BitBoard::ZERO,
             side_to_move: Side::White,
             half_move_counter: 0,
             full_move_counter: 0,
@@ -84,9 +86,10 @@ impl ChessBoard {
             mailbox: self.mailbox,
             castle_bools: self.castle_bools,
             enpassant_bb: self.enpassant_bb, //enpassant_bb are pawn-attackable square via en-passant
-            attacked_bb: self.attacked_bb,
+            //attacked_bb: self.attacked_bb,
             check_bb: self.check_bb,
             pinned_bb: self.pinned_bb,
+            pinner_bb: self.pinned_bb,
             side_to_move: self.side_to_move,
             half_move_counter: self.half_move_counter,
             full_move_counter: self.full_move_counter,
@@ -128,6 +131,26 @@ impl ChessBoard {
     pub const fn hash(&self) -> ZorbistHash {
         todo!()
     }
+    //computes the squares attacked
+    pub(crate) const fn compute_attack_mask(&self, attacking_side: Side) -> BitBoard {
+        let mut attack_mask: BitBoard = BitBoard::ZERO;
+        let mut i: usize = 0;
+
+        while i < 64 {
+            match self.mailbox[i] {
+                Some(_) => todo!(),
+                None => todo!(),
+            }
+
+        }
+        match attacking_side {
+            Side::White => {
+                self.piece_bbs[cpt_index!(k)];
+            },
+            Side::Black => todo!(),
+        }
+        todo!()
+    }
 
     //TODO maybe is_square_attacked should have parameterized blockers?
     pub const fn is_square_attacked(&self, square: Square, attacker_side: Side) -> bool {
@@ -142,7 +165,7 @@ impl ChessBoard {
                     || (get_king_attack(square).bit_and(&self.piece_bbs[0])).is_not_zero();
             }
             Side::Black => {
-                return (get_b_pawn_attack(square).bit_and(&self.piece_bbs[11])).is_not_zero()
+                return (get_w_pawn_attack(square).bit_and(&self.piece_bbs[11])).is_not_zero()
                     || (get_rook_attack(square, blockers).bit_and(&self.piece_bbs[10])).is_not_zero()
                     || (get_bishop_attack(square, blockers).bit_and(&self.piece_bbs[9])).is_not_zero()
                     || (get_knight_attack(square).bit_and(&self.piece_bbs[8])).is_not_zero()
@@ -165,7 +188,7 @@ impl ChessBoard {
                     || (get_king_attack(square).bit_and(&self.piece_bbs[6])).is_not_zero();
             }
             Side::Black => {
-                return (get_b_pawn_attack(square).bit_and(&self.piece_bbs[5])).is_not_zero()
+                return (get_w_pawn_attack(square).bit_and(&self.piece_bbs[5])).is_not_zero()
                     || (get_rook_attack(square, blockers).bit_and(&self.piece_bbs[4])).is_not_zero()
                     || (get_bishop_attack(square, blockers).bit_and(&self.piece_bbs[3])).is_not_zero()
                     || (get_knight_attack(square).bit_and(&self.piece_bbs[2])).is_not_zero()
@@ -340,6 +363,7 @@ impl ChessBoard {
         return false;
     }
 
+    //pub(crate const fn calculate_
     pub(crate) const fn calculate_pin_data(&self, square: Square) -> (BitBoard,BitBoard) {
         //FIXME ?? duplicating self, mutating it, is it necessary?
         //let is_pinned: bool;
