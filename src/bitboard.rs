@@ -9,12 +9,12 @@ use crate::bitboard::init::*;
 use crate::bitboard::magic::*;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(crate) struct BitBoard {
+pub struct BitBoard {
     data: u64,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(crate)enum Side {
+pub enum Side {
     White,
     Black,
 }
@@ -43,6 +43,20 @@ impl PieceType {
         const PIECETYPES: [PieceType; 6] =
             [PieceType::Pawn, PieceType::Knight, PieceType::Bishop, PieceType::Rook, PieceType::Queen, PieceType::King];
         PIECETYPES.iter()
+    }
+}
+
+
+impl PieceType {
+    pub fn to_uci_char(&self) -> char {
+        match self {
+            PieceType::Pawn => 'p',
+            PieceType::Knight => 'n',
+            PieceType::Bishop => 'b',
+            PieceType::Rook => 'r',
+            PieceType::Queen => 'q',
+            PieceType::King => 'k',
+        }
     }
 }
 
@@ -98,8 +112,8 @@ impl BitBoard {
         self.data != 0u64
     }
 
-    pub(crate)  fn set_bit(&mut self, i: usize) {
-        self.data = self.data | 1u64 << i;
+    pub(crate)  fn set_bit(& self, square: Square) -> BitBoard {
+       BitBoard {data: self.data | 1u64 << square.to_index()}
     }
 
     pub(crate) const fn get_bit(&self, i: usize) -> BitBoard {
@@ -199,17 +213,17 @@ const fn rays() -> [[BitBoard; 64]; 64] {
 }
 
 /* ==== constants and supporting functions ==== */
-const ASCII_SYM: [char; 12] = ['K', 'Q', 'N', 'B', 'R', 'P', 'k', 'q', 'n', 'b', 'r', 'p'];
-const UNICODE_SYM: [char; 12] = ['♚', '♛', '♞', '♝', '♜', '♟', '♔', '♕', '♘', '♗', '♖', '♙'];
+pub(super) const ASCII_SYM: [char; 12] = ['K', 'Q', 'N', 'B', 'R', 'P', 'k', 'q', 'n', 'b', 'r', 'p'];
+pub(super) const UNICODE_SYM: [char; 12] = ['♚', '♛', '♞', '♝', '♜', '♟', '♔', '♕', '♘', '♗', '♖', '♙'];
 
 pub(crate) const W_KING_SIDE_CASTLE_MASK: BitBoard =
     BitBoard::new(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000110);
 pub(crate) const W_QUEEN_SIDE_CASTLE_MASK: BitBoard =
-    BitBoard::new(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_01110000);
+    BitBoard::new(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00110000);
 pub(crate) const B_KING_SIDE_CASTLE_MASK: BitBoard =
     BitBoard::new(0b00000110_00000000_00000000_00000000_00000000_00000000_00000000_00000000);
 pub(crate) const B_QUEEN_SIDE_CASTLE_MASK: BitBoard =
-    BitBoard::new(0b01110000_00000000_00000000_00000000_00000000_00000000_00000000_00000000);
+    BitBoard::new(0b00110000_00000000_00000000_00000000_00000000_00000000_00000000_00000000);
 
 pub const fn get_pawn_attack(square: Square, side: Side) -> BitBoard {
     match side {

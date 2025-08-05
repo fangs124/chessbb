@@ -87,14 +87,6 @@ impl ZorbistHash {
             crate::bitboard::Side::Black => SIDE_HASH[0],
         };
 
-        //FIXME iterator is a bit fucky-wucky
-        //for square in Square::iterator() {
-        //for square_index in Square::squares_array_usize().iter() {
-        //    if let Some(piece_data) = chessboard.mailbox[*square_index] {
-        //        val ^= PIECE_HASH[*square_index][cp_index(piece_data)];
-        //    }
-        //}
-
         //piece hash
         let mut i: usize = 0;
         while i < 64 {

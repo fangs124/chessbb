@@ -46,9 +46,21 @@ note: castling move are encoded as follows
 
 //API traits: Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display, Default
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ChessMove {
-    data: u16,
+    pub data: u16,
+}
+
+impl Ord for ChessMove {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.print_move().cmp(&other.print_move())
+    }
+}
+
+impl PartialOrd for ChessMove {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.print_move().partial_cmp(&other.print_move())
+    }
 }
 
 //impl Display for ChessMove {
@@ -98,6 +110,7 @@ impl ChessMove {
             0b11 => PieceType::Queen,
             _ => unreachable!(),
         };
+
         let castling: Castling = match ((self.data & 0b11_000000_000000u16) as usize) >> 12 {
             0b00 => Castling::KINGSIDE(Side::White),
             0b01 => Castling::QUEENSIDE(Side::White),
@@ -105,6 +118,7 @@ impl ChessMove {
             0b11 => Castling::QUEENSIDE(Side::Black),
             _ => unreachable!(),
         };
+
         match ((self.data & 0b11_00_000000_000000) as usize) >> 14 {
             0 => MoveType::Normal,
             1 => MoveType::Castle(castling),
