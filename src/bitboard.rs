@@ -29,7 +29,7 @@ impl Side {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(crate) enum PieceType {
+pub enum PieceType {
     Pawn,
     Knight,
     Bishop,
@@ -48,7 +48,7 @@ impl PieceType {
 
 
 impl PieceType {
-    pub fn to_uci_char(&self) -> char {
+    pub(crate) fn to_uci_char(&self) -> char {
         match self {
             PieceType::Pawn => 'p',
             PieceType::Knight => 'n',
@@ -90,25 +90,25 @@ impl BitBoard {
     }
 
 
-    pub const fn nth_is_zero(&self, sq: Square) -> bool {
+    pub(crate) const fn nth_is_zero(&self, sq: Square) -> bool {
         match self.data & (1u64 << sq.to_index()) {
             0 => true,
             _ => false,
         }
     }
 
-    pub const fn nth_is_not_zero(&self, sq: Square) -> bool {
+    pub(crate) const fn nth_is_not_zero(&self, sq: Square) -> bool {
         match self.data & (1u64 << sq.to_index()) {
             0 => false,
             _ => true,
         }
     }
 
-    pub const fn is_zero(&self) -> bool {
+    pub(crate) const fn is_zero(&self) -> bool {
         self.data == 0u64
     }
 
-    pub const fn is_not_zero(&self) -> bool {
+    pub(crate) const fn is_not_zero(&self) -> bool {
         self.data != 0u64
     }
 

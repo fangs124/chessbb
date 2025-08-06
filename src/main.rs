@@ -1,4 +1,4 @@
-use chessbb::chessmove::*;
+//use chessbb::chessmove::*;
 use chessbb::*;
 //use chessbb::chessmove::ChessMove;
 use std::{env, time::Instant};
@@ -61,30 +61,78 @@ fn main() {
     // Missing move f4e3
 
     /* position 3 */
-    let start_fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1";
-    //a5a6, h5h7, a6a7, c7c5, a7a6, c5c4, e2e4
-    let datas = [3047, 3104, 3567, 2421, 3063, 1893, 1739];
+    //let start_fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1";
+    ////a5a6, h5h7, a6a7, c7c5, a7a6, c5c4, e2e4, c4c3, b4a4, c3c2, a4a5, h4h5, g2g4
+    //let datas = [3047, 3104, 3567, 2421, 3063, 1893, 1739, 1373, 2014, 853, 2527, 2072, 1609];
+    //let moves = datas.map(|x| ChessMove { data: x });
+    //let mut chessboard = ChessBoard::from_fen(start_fen);
+    //for chessmove in moves {
+    //    chessboard.update_state(chessmove);
+    //}
+
+    /* position 4 */
+    //let start_fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1";
+    ////b4c5, e8c8, a1b1, d8e8
+    //let datas = [2398, 32635, 391, 3836];
+    //let moves = datas.map(|x| ChessMove { data: x });
+    //let mut chessboard = ChessBoard::from_fen(start_fen);
+    //for chessmove in moves {
+    //    chessboard.update_state(chessmove);
+    //}
+    //let mut moves = chessboard.generate_moves();
+    //moves.sort();
+
+    /* position 5 */
+    //let start_fen = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8";
+    ////
+    //let datas = [];
+    //let moves = datas.map(|x| ChessMove { data: x });
+    //let mut chessboard = ChessBoard::from_fen(start_fen);
+    //for chessmove in moves {
+    //    chessboard.update_state(chessmove);
+    //}
+    //let mut moves = chessboard.generate_moves();
+    //moves.sort();
+
+    /* position 6 */
+    let start_fen = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10";
+    //
+    let datas = [];
     let moves = datas.map(|x| ChessMove { data: x });
     let mut chessboard = ChessBoard::from_fen(start_fen);
     for chessmove in moves {
         chessboard.update_state(chessmove);
     }
-
-    //a5a6 - 59030 should have 59028 leaves
-    //e2e4 - 36883 should have 36889 leaves
-    //g2g4 - 53893 should have 53895 leaves
     let mut moves = chessboard.generate_moves();
     moves.sort();
-    println!("chessmove: {:#?}", moves[9]);
+
+    /* error msg here */
+
+    /* ============== */
+    //println!("chessmove: {:#?}", moves[8]);
     //println!("castle_bools: {:#?}", chessboard.castle_bools);
-    println!("chessboard.enpassant_bb:\n{}\n", chessboard.enpassant_bb);
+    //println!("chessboard.enpassant_bb:\n{}\n", chessboard.enpassant_bb);
     //println!("chessboard.pinned_bb:\n{}\n", chessboard.pinned_bb);
     //println!("chessboard.pinner_bb:\n{}\n", chessboard.pinner_bb);
     //println!("chessboard.check_bb:\n{}\n", chessboard.check_bb);
     //println!("chessboard.check_mask:\n{}\n", chessboard.check_mask);
     println!("==== start position ====\n");
     println!("{}", chessboard);
+    let mut result_str_vec = Vec::<String>::new();
+    for chessmove in moves {
+        let mut s = chessmove.print_move();
+        s.push_str(format!(" - data: {}", chessmove.data).as_str());
+        result_str_vec.push(s);
+    }
+    for result_str in result_str_vec {
+        println!("{}", result_str);
+    }
+    println!("");
     println!("========================");
+    //println!("white rook:\n{}", chessboard.piece_bb(cpt!(R)));
+    //println!("black rook:\n{}", chessboard.piece_bb(cpt!(r)));
+    //println!("mailbox:\n{:#?}", chessboard.mailbox());
+    //println!("========================");
     //panic!();
     let mut depth: usize = 1;
     let max_depth: usize = 6;

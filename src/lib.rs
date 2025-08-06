@@ -1,5 +1,5 @@
 mod bitboard;
-pub mod chessmove;
+mod chessmove;
 mod movegen;
 mod square;
 mod zorbist;
@@ -8,24 +8,27 @@ use std::fmt::Display;
 
 use crate::{bitboard::*, square::Square, zorbist::{ZorbistHash, ZorbistTable}};
 use crate::perft::*;
-/* chessboard specific bitboard functions and definitions*/
+
+/* re-export */
+pub use crate::chessmove::ChessMove;
+pub use crate::bitboard::{Side, PieceType};
 
 /* ChessBoard encodes the board-state of the game */
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct ChessBoard {
-    pub piece_bbs: [BitBoard; 12],
-    pub mailbox: [Option<ChessPiece>; 64],
-    pub castle_bools: [bool; 4],
-    pub enpassant_bb: BitBoard, //pieces triggering en-passant rule
+    piece_bbs: [BitBoard; 12],
+    mailbox: [Option<ChessPiece>; 64],
+    castle_bools: [bool; 4],
+    enpassant_bb: BitBoard, //pieces triggering en-passant rule
     //attacked_bb: BitBoard, //a mask showing all attacked squares (do I need this?)
-    pub check_bb: BitBoard, //pieces triggering check condition
-    pub check_mask: BitBoard, //all the squares attacked by checking pieces;
-    pub pinned_bb: BitBoard, //pieces that are pinned
-    pub pinner_bb: BitBoard, //pieces doing the pin
-    pub side_to_move: Side,
-    pub full_move_counter: u16,
-    pub fifty_move_rule_counter: u16,
-    pub zorbist_table: ZorbistTable,
+    check_bb: BitBoard, //pieces triggering check condition
+    check_mask: BitBoard, //all the squares attacked by checking pieces;
+    pinned_bb: BitBoard, //pieces that are pinned
+    pinner_bb: BitBoard, //pieces doing the pin
+    side_to_move: Side,
+    full_move_counter: u16,
+    fifty_move_rule_counter: u16,
+    zorbist_table: ZorbistTable,
 }
 
 impl Default for ChessBoard {
@@ -525,7 +528,7 @@ impl ChessBoard {
         }
     }
 
-    pub(crate) const fn piece_bb(&self, piece_type: ChessPiece) -> BitBoard {
+    pub const fn piece_bb(&self, piece_type: ChessPiece) -> BitBoard {
         match piece_type {
             (Side::White, PieceType::King  ) => self.piece_bbs[00],
             (Side::White, PieceType::Queen ) => self.piece_bbs[01],
@@ -540,6 +543,10 @@ impl ChessBoard {
             (Side::Black, PieceType::Rook  ) => self.piece_bbs[10],
             (Side::Black, PieceType::Pawn  ) => self.piece_bbs[11],
         }
+    }
+
+    pub const fn mailbox(&self) -> [Option<(bitboard::Side, bitboard::PieceType)>; 64] {
+        self.mailbox
     }
 
     #[rustfmt::skip]

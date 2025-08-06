@@ -9,3 +9,5 @@ edition = "2024"
 opt-level = 3
 [profile.release]
 opt-level = 3
+panic = "abort"
+strip = "symbols"

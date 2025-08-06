@@ -209,7 +209,8 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
         }
     }
 
-    //if s.to_index() == 38 {
+    //if s.to_index() == 26 {
+    //    println!("outer loop");
     //    println!("en-passant case, square: {}", s.to_index());
     //    println!("enpassant_bb:\n{}", chessboard.enpassant_bb);
     //    println!("check_bb:\n{}", chessboard.check_bb);
@@ -257,13 +258,21 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
                 }
             }
 
+            //if s.to_index() == 26 {
+            //    println!("outer inner loop!!!");
+            //    println!("en-passant case, square: {}", s.to_index());
+            //    println!("enpassant_bb:\n{}", chessboard.enpassant_bb);
+            //    println!("check_bb:\n{}", chessboard.check_bb);
+            //    println!("check_mask:\n{}", chessboard.check_mask);
+            //}
+
             //if enemy rook and friendly king is in the same row, check for special case
             if ((chessboard.piece_bbs[enemy_rook_index].bit_or(&chessboard.piece_bbs[king_index]))
                 .bit_and(&king_row_bb)
                 .count_ones()
                 >= 2)
             {
-                //if s.to_index() == 38 {
+                //if s.to_index() == 26 {
                 //    println!("inner loop!!!");
                 //    println!("en-passant case, square: {}", s.to_index());
                 //    println!("enpassant_bb:\n{}", chessboard.enpassant_bb);
@@ -278,12 +287,15 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
                     Side::White => cpt_index!(P),
                     Side::Black => cpt_index!(p),
                 };
-                test_cb.piece_bbs[i] = test_cb.piece_bbs[i].bit_and(&BitBoard::nth(source).bit_not());
-                test_cb.piece_bbs[i] = test_cb.piece_bbs[i].bit_and(&BitBoard::nth(attack));
-                test_cb.piece_bbs[enemy_pawn_index] =
-                    test_cb.piece_bbs[enemy_pawn_index].bit_and(&BitBoard::nth(enemy_pawn_square).bit_not());
 
+                test_cb.piece_bbs[i] = test_cb.piece_bbs[i].pop_bit(source); //remove from source square
+                test_cb.piece_bbs[i] = test_cb.piece_bbs[i].set_bit(attack); //add to attack square
+                test_cb.piece_bbs[enemy_pawn_index] = test_cb.piece_bbs[enemy_pawn_index].pop_bit(enemy_pawn_square);
                 if test_cb.is_king_in_check(side) {
+                    //if s.to_index() == 26 {
+                    //    println!("inner inner loop!!!");
+                    //    println!("test_cb:\n{}", test_cb);
+                    //}
                     attacks = attacks.pop_bit(attack);
                     continue;
                 }
@@ -300,6 +312,8 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
                     let checker_square = chessboard.check_bb.lsb_square().unwrap();
                     if checker_square == enemy_pawn_square {
                         moves.push(ChessMove::new(source, attack, MoveType::EnPassant));
+                        attacks = attacks.pop_bit(attack);
+                        continue;
                     }
                 }
             }
@@ -513,7 +527,7 @@ impl ChessBoard {
                         self.piece_bbs[10] = self.piece_bbs[10].pop_bit(black_kingside_rook_sq_source);
                         self.piece_bbs[10] = self.piece_bbs[10].bit_or(&BitBoard::nth(black_kingside_rook_sq_target));
                         self.mailbox[black_kingside_rook_sq_source.to_index()] = None;
-                        self.mailbox[black_kingside_rook_sq_target.to_index()] = opt_cpt!(R);
+                        self.mailbox[black_kingside_rook_sq_target.to_index()] = opt_cpt!(r);
 
                         //update hash
                         current_hash ^= ZorbistHash::piece_hash(black_kingside_rook_sq_source, cpt!(r));
@@ -526,7 +540,7 @@ impl ChessBoard {
                         self.piece_bbs[10] = self.piece_bbs[10].pop_bit(black_queenside_rook_sq_source);
                         self.piece_bbs[10] = self.piece_bbs[10].bit_or(&BitBoard::nth(black_queenside_rook_sq_target));
                         self.mailbox[black_queenside_rook_sq_source.to_index()] = None;
-                        self.mailbox[black_queenside_rook_sq_target.to_index()] = opt_cpt!(R);
+                        self.mailbox[black_queenside_rook_sq_target.to_index()] = opt_cpt!(r);
 
                         //update hash
                         current_hash ^= ZorbistHash::piece_hash(black_queenside_rook_sq_source, cpt!(r));
