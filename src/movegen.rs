@@ -95,14 +95,31 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
         Side::Black => 0,
     };
 
+    //FIXME need to check whats the pinning piece
     if pin_mask.is_not_zero() {
         let mut pinners = pinners;
         while pinners.is_not_zero() {
             let square = pinners.lsb_square().unwrap();
             assert!(source != square);
-            is_pinned_diag = is_pinned_diag || is_same_diag(source, square);
-            is_pinned_vert = is_pinned_vert || is_same_col(source, square);
-            is_pinned_horz = is_pinned_horz || is_same_row(source, square);
+            is_pinned_diag = is_pinned_diag
+                || (((is_same_adiag(source, square) && is_same_adiag(king_square, source))
+                    || (is_same_ddiag(source, square) && is_same_ddiag(king_square, source)))
+                    && matches!(
+                        chessboard.mailbox[square.to_index()].unwrap(),
+                        (_, PieceType::Bishop) | (_, PieceType::Queen)
+                    ));
+            is_pinned_vert = is_pinned_vert
+                || ((is_same_col(source, square) && is_same_col(king_square, source))
+                    && matches!(
+                        chessboard.mailbox[square.to_index()].unwrap(),
+                        (_, PieceType::Rook) | (_, PieceType::Queen)
+                    ));
+            is_pinned_horz = is_pinned_horz
+                || ((is_same_row(source, square) && is_same_row(king_square, source))
+                    && matches!(
+                        chessboard.mailbox[square.to_index()].unwrap(),
+                        (_, PieceType::Rook) | (_, PieceType::Queen)
+                    ));
             pinners = pinners.pop_bit(square);
         }
     }
@@ -114,9 +131,8 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
     };
 
     // ~p ^ ~q <=> ~(p v q)
-    /* pawn move - one square */
     if (is_pinned_diag || is_pinned_horz) == false {
-        // one-square pawn move
+        /* pawn move - one square */
         let target = next;
         // can only move one square if next square is empty
         if blockers.nth_is_zero(target) {
@@ -159,6 +175,11 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
 
     // ~p ^ ~q <=> ~(p v q)
     //if (is_pinned_horz == false) && (is_pinned_vert == false)
+    //if source == Square::new(35) {
+    //    println!("attack_mask:\n{}", attack_mask);
+    //    println!("is_pinned_horz:\n{}", is_pinned_horz);
+    //    println!("is_pinned_vert:\n{}", is_pinned_vert);
+    //}
     /* pawn attacks */
     if (is_pinned_horz || is_pinned_vert) == false {
         let mut attacks = attack_mask;
@@ -167,8 +188,17 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
             //FIXME assumption checkers count == 1
             //can only attack a square if not in check or attack blocks check
             if check_mask.is_zero() || (check_mask.nth_is_not_zero(attack)) {
-                //can only attack a square if not pinned or attack is along a pin-ray
-                if pin_mask.is_zero() || pin_mask.nth_is_not_zero(attack) {
+                //FIXME make this less ugly
+                let is_same_diagonal = (DDIAG[source.to_index()] == DDIAG[attack.to_index()]
+                    && DDIAG[attack.to_index()] == DDIAG[king_square.to_index()])
+                    || ADIAG[source.to_index()] == ADIAG[attack.to_index()]
+                        && ADIAG[attack.to_index()] == ADIAG[king_square.to_index()];
+                let is_attack_pinner = pinners.nth_is_not_zero(attack) && is_same_diagonal;
+                //if source == Square::new(43) {
+                //    println!("is_same_diagonal:{}", is_same_diagonal);
+                //}
+                //can only attack a square if not pinned or capturing piece pinning the pawn
+                if pin_mask.is_zero() || is_attack_pinner {
                     match (ROWS[attack.to_index()] == promotion_row) {
                         true => moves.append(&mut ChessMove::promotions(source, attack).to_vec()),
                         false => moves.push(ChessMove::new(source, attack, MoveType::Normal)),
@@ -178,6 +208,13 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
             attacks = attacks.pop_bit(attack);
         }
     }
+
+    //if s.to_index() == 38 {
+    //    println!("en-passant case, square: {}", s.to_index());
+    //    println!("enpassant_bb:\n{}", chessboard.enpassant_bb);
+    //    println!("check_bb:\n{}", chessboard.check_bb);
+    //    println!("check_mask:\n{}", chessboard.check_mask);
+    //}
 
     //TODO can we use is_pinned_horz, is_pinned_vert, is_pinned_vert in place of is_piece_pinned()?
     /* pawn en-passant */
@@ -198,19 +235,22 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
             // . . . | .
             // . . . x .
 
-            let row_bb = BitBoard::new(0b11111111u64 << (8 * ROWS[source.to_index()]));
-
+            let pawn_row_bb = BitBoard::new(0b11111111u64 << (8 * (ROWS[source.to_index()])));
+            let king_row_bb = BitBoard::new(0b11111111u64 << (8 * (ROWS[king_square.to_index()])));
+            let king_index;
             let enemy_rook_index;
             let enemy_pawn_index;
             let enemy_pawn_square;
 
             match side {
                 Side::White => {
+                    king_index = 0;
                     enemy_rook_index = cpt_index!(r);
                     enemy_pawn_index = cpt_index!(p);
                     enemy_pawn_square = Square::new(attack.to_u8() - 8u8);
                 }
                 Side::Black => {
+                    king_index = 6;
                     enemy_rook_index = cpt_index!(R);
                     enemy_pawn_index = cpt_index!(P);
                     enemy_pawn_square = Square::new(attack.to_u8() + 8u8);
@@ -218,12 +258,22 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
             }
 
             //if enemy rook and friendly king is in the same row, check for special case
-            if (ROWS[king_square.to_index()] == ROWS[source.to_index()])
-                && (chessboard.piece_bbs[enemy_rook_index].bit_and(&row_bb).is_not_zero())
+            if ((chessboard.piece_bbs[enemy_rook_index].bit_or(&chessboard.piece_bbs[king_index]))
+                .bit_and(&king_row_bb)
+                .count_ones()
+                >= 2)
             {
+                //if s.to_index() == 38 {
+                //    println!("inner loop!!!");
+                //    println!("en-passant case, square: {}", s.to_index());
+                //    println!("enpassant_bb:\n{}", chessboard.enpassant_bb);
+                //    println!("check_bb:\n{}", chessboard.check_bb);
+                //    println!("check_mask:\n{}", chessboard.check_mask);
+                //}
                 //check if en-passant leaves king in check
                 //FIXME this is computationally costly
-                let mut test_cb = chessboard.duplicate();
+                //FIXME bug here
+                let mut test_cb: ChessBoard = chessboard.duplicate();
                 let i = match side {
                     Side::White => cpt_index!(P),
                     Side::Black => cpt_index!(p),
@@ -239,7 +289,7 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
                 }
 
                 //if there are no checks
-                if chessboard.check_bb.is_not_zero() {
+                if chessboard.check_bb.is_zero() {
                     moves.push(ChessMove::new(source, attack, MoveType::EnPassant));
                     attacks = attacks.pop_bit(attack);
                     continue;
@@ -519,9 +569,13 @@ impl ChessBoard {
 
                 //dealing with captures
                 if let Some(target_piece) = target_piece {
+                    let target_index = cp_index(target_piece);
+                    self.piece_bbs[target_index] = self.piece_bbs[target_index].pop_bit(target);
+                    current_hash ^= ZorbistHash::piece_hash(target, target_piece);
+
+                    //reset 50-move rule
                     self.fifty_move_rule_counter = 0;
                     is_counter_reset = true;
-                    current_hash ^= ZorbistHash::piece_hash(target, target_piece);
 
                     //if capturing enemy rook, update castling rights
                     match (target_piece, target.to_u8()) {
@@ -664,7 +718,7 @@ impl ChessBoard {
                 let knight_bb = self.piece_bbs[08].bit_and(&get_knight_attack(king_square));
                 let bishop_bb = self.piece_bbs[09].bit_and(&get_bishop_attack(king_square, blockers));
                 let rook_bb = self.piece_bbs[10].bit_and(&get_rook_attack(king_square, blockers));
-                let pawn_bb = self.piece_bbs[11].bit_and(&get_b_pawn_attack(king_square));
+                let pawn_bb = self.piece_bbs[11].bit_and(&get_w_pawn_attack(king_square));
                 self.check_bb = queen_bb.bit_or(&knight_bb.bit_or(&bishop_bb.bit_or(&rook_bb.bit_or(&pawn_bb))));
             }
 
@@ -677,7 +731,7 @@ impl ChessBoard {
                 let knight_bb = self.piece_bbs[02].bit_and(&get_knight_attack(king_square));
                 let bishop_bb = self.piece_bbs[03].bit_and(&get_bishop_attack(king_square, blockers));
                 let rook_bb = self.piece_bbs[04].bit_and(&get_rook_attack(king_square, blockers));
-                let pawn_bb = self.piece_bbs[05].bit_and(&get_w_pawn_attack(king_square));
+                let pawn_bb = self.piece_bbs[05].bit_and(&get_b_pawn_attack(king_square));
                 self.check_bb = queen_bb.bit_or(&knight_bb.bit_or(&bishop_bb.bit_or(&rook_bb.bit_or(&pawn_bb))));
             }
         }
@@ -725,9 +779,12 @@ impl ChessBoard {
                 (_, PieceType::Queen) => get_queen_attack(possible_pinner, enemies),
                 _ => panic!(),
             };
+            let enemy_blocker =
+                RAYS[king_square.to_index()][possible_pinner.to_index()].bit_and(&enemies).bit_and(&attack_mask);
             let possible_pinned =
                 RAYS[king_square.to_index()][possible_pinner.to_index()].bit_and(&friends).bit_and(&attack_mask);
-            if possible_pinned.count_ones() == 1 {
+            //a piece is only pinned if its the only one between the pinner and the king. enemy can also block the line of sight.
+            if possible_pinned.count_ones() == 1 && enemy_blocker.count_ones() == 0 {
                 pinner_bb = pinner_bb.bit_or(&BitBoard::nth(possible_pinner));
                 pinned_bb = pinned_bb.bit_or(&possible_pinned);
             }

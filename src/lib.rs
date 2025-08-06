@@ -101,6 +101,7 @@ impl ChessBoard {
         let mut chessboard = ChessBoard::start_pos();
         chessboard.piece_bbs = [BitBoard::ZERO; 12];
         chessboard.mailbox = [None; 64];
+        chessboard.castle_bools = [false, false, false, false];
 
 
         // parse piece placement data
@@ -153,7 +154,7 @@ impl ChessBoard {
             };
 
             match s {
-                '-' => continue,
+                '-' => (),
                 'K' => chessboard.castle_bools[0] = true,
                 'Q' => chessboard.castle_bools[1] = true,
                 'k' => chessboard.castle_bools[2] = true,

@@ -46,37 +46,48 @@ fn main() {
     chessboard.update_state(move16aa);
     chessboard.update_state(move17aa);
     */
-    let start_fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"; //kiwipete
+    /* from kiwipete pos */
+    //let start_fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"; //kiwipete
+    //missing e5f4
+    //e5d7, a6b5, d7b8, b6d7, e2b5, c7c6, b8d7, e8d7, d5c6, d7c8, b5a6, e7b7, f3f5, h3g2, a1b1, g2h1b, a2a3, c8b8
+    //f6b6, e6e5, d2f4
+    //let datas_branch_a = [
+    //    3363, 2479, 4020, 3374, 2443, 2933, 3390, 3387, 2916, 3956, 3046, 3507, 2194, 592, 391, 53257, 1487, 4029,
+    //    2466, 2283, 1676,
+    //];
+    //e5d7, a6b5, d7b8, b6d7, e2b5, c7c6, b8d7, e8d7, d5c6, d7c8, c6c7
+    //let datas_branch_b = [3363, 2479, 4020, 3374, 2443, 2933, 3390, 3387, 2916, 3956, 3956];
+
+    // Missing move f4e3
+
+    /* position 3 */
+    let start_fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1";
+    //a5a6, h5h7, a6a7, c7c5, a7a6, c5c4, e2e4
+    let datas = [3047, 3104, 3567, 2421, 3063, 1893, 1739];
+    let moves = datas.map(|x| ChessMove { data: x });
     let mut chessboard = ChessBoard::from_fen(start_fen);
+    for chessmove in moves {
+        chessboard.update_state(chessmove);
+    }
 
-    let move1 = ChessMove { data: 3363 }; //e5d7
-    let move2 = ChessMove { data: 2479 }; //a6b5
-    let move3 = ChessMove { data: 4020 }; //d7b8
-    let move4 = ChessMove { data: 3374 }; //b6d7
-    let move5 = ChessMove { data: 2443 }; //e2b5
-    let move6 = ChessMove { data: 2933 }; //c7c6
-    let move7 = ChessMove { data: 3390 }; //b8d7
-    chessboard.update_state(move1);
-    chessboard.update_state(move2);
-    chessboard.update_state(move3);
-    chessboard.update_state(move4);
-    chessboard.update_state(move5);
-    chessboard.update_state(move6);
-    chessboard.update_state(move7);
-
+    //a5a6 - 59030 should have 59028 leaves
+    //e2e4 - 36883 should have 36889 leaves
+    //g2g4 - 53893 should have 53895 leaves
     let mut moves = chessboard.generate_moves();
     moves.sort();
-    println!("chessmove: {:#?}", moves[15]);
+    println!("chessmove: {:#?}", moves[9]);
     //println!("castle_bools: {:#?}", chessboard.castle_bools);
-    //println!("chessboard.enpassant_bb:\n{}\n", chessboard.enpassant_bb);
-    println!("chessboard.pinned_bb:\n{}\n", chessboard.pinned_bb);
-    println!("chessboard.pinner_bb:\n{}\n", chessboard.pinner_bb);
+    println!("chessboard.enpassant_bb:\n{}\n", chessboard.enpassant_bb);
+    //println!("chessboard.pinned_bb:\n{}\n", chessboard.pinned_bb);
+    //println!("chessboard.pinner_bb:\n{}\n", chessboard.pinner_bb);
+    //println!("chessboard.check_bb:\n{}\n", chessboard.check_bb);
+    //println!("chessboard.check_mask:\n{}\n", chessboard.check_mask);
     println!("==== start position ====\n");
     println!("{}", chessboard);
     println!("========================");
-    panic!();
+    //panic!();
     let mut depth: usize = 1;
-    let max_depth: usize = 7;
+    let max_depth: usize = 6;
     while depth <= max_depth {
         let now = Instant::now();
         let total = chessboard.perft_count(depth);
@@ -93,7 +104,7 @@ fn main() {
             s.push_str(format!(" - {}", branch_total).as_str());
             result_str_vec.push(s);
         }
-        println!("depth: {}, time: {}, total: {}", depth, elapsed.as_secs(), total);
+        println!("depth: {}, time: {}ms, total: {}", depth, elapsed.as_millis(), total);
 
         for result_str in result_str_vec {
             println!("{}", result_str);
