@@ -1,6 +1,5 @@
 use crate::bitboard::BitBoard;
 use crate::bitboard::attack::{naive_bishop_attack, naive_rook_attack};
-use crate::square::Square;
 
 pub(super) const SIZE_BISHOP: usize = 1 << 9; //size of the index for bishop magic bitboard index in bits
 pub(super) const SIZE_ROOK: usize = 1 << 12; //size of the index for rook magic bitboard index in bits
@@ -87,7 +86,7 @@ const fn compute_occ_bb(index: usize, mask_bitcount: usize, attack_mask: BitBoar
             attack_mask.pop_bit(square_index);
             // check that square is within range of index
             if index & (1 << i) != 0usize {
-                occupancy_bb.data |= 1u64 << square_index.to_index()
+                occupancy_bb.data |= 1u64 << square_index.to_usize()
             }
         }
         i += 1;

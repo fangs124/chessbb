@@ -6,6 +6,7 @@ pub struct Square {
 }
 
 impl Default for Square {
+    #[inline(always)]
     fn default() -> Self {
         Self { data: Default::default() }
     }
@@ -21,12 +22,12 @@ impl Square {
     }
 
     #[inline(always)]
-    pub const fn to_u8(&self) -> u8 {
+    pub const fn to_u8(self) -> u8 {
         self.data
     }
 
     #[inline(always)]
-    pub const fn to_index(&self) -> usize {
+    pub const fn to_usize(self) -> usize {
         self.data as usize
     }
 

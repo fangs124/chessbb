@@ -86,12 +86,12 @@ impl BitBoard {
     //creates a bitboard with a a non-zero bit in the n-th place
     #[inline(always)]
     pub(crate) const fn nth(sq: Square) -> Self {
-        Self { data: 1u64 << sq.to_index() }
+        Self { data: 1u64 << sq.to_usize() }
     }
 
     #[inline(always)]
     pub(crate) const fn nth_is_zero(&self, sq: Square) -> bool {
-        match self.data & (1u64 << sq.to_index()) {
+        match self.data & (1u64 << sq.to_usize()) {
             0 => true,
             _ => false,
         }
@@ -99,7 +99,7 @@ impl BitBoard {
 
     #[inline(always)]
     pub(crate) const fn nth_is_not_zero(&self, sq: Square) -> bool {
-        match self.data & (1u64 << sq.to_index()) {
+        match self.data & (1u64 << sq.to_usize()) {
             0 => false,
             _ => true,
         }
@@ -117,7 +117,7 @@ impl BitBoard {
 
     #[inline(always)]
     pub(crate) const fn set_bit(&mut self, square: Square) { 
-        self.data |= 1u64 << square.to_index();
+        self.data |= 1u64 << square.to_usize();
     }
 
     #[inline(always)]
@@ -129,7 +129,7 @@ impl BitBoard {
 
     #[inline(always)]
     pub(crate) const fn pop_bit(&mut self, square: Square) {
-        self.data &=!(1u64 << square.to_index());
+        self.data &=!(1u64 << square.to_usize());
     }
 
     //pub(crate) const fn get_bit_data(&self, i: usize) -> u64 {
@@ -234,27 +234,27 @@ pub(crate) const B_QUEEN_SIDE_CASTLE_MASK: BitBoard =
 
 #[inline(always)]
 pub(crate) const fn is_same_diag(source: Square, target: Square) -> bool {
-   (DDIAG[source.to_index()] == DDIAG[target.to_index()]) || (ADIAG[source.to_index()] == ADIAG[target.to_index()])
+   (DDIAG[source.to_usize()] == DDIAG[target.to_usize()]) || (ADIAG[source.to_usize()] == ADIAG[target.to_usize()])
 }
 
 #[inline(always)]
 pub(crate) const fn is_same_adiag(source: Square, target: Square) -> bool {
-    ADIAG[source.to_index()] == ADIAG[target.to_index()]
+    ADIAG[source.to_usize()] == ADIAG[target.to_usize()]
 }
 
 #[inline(always)]
 pub(crate) const fn is_same_ddiag(source: Square, target: Square) -> bool {
-    DDIAG[source.to_index()] == DDIAG[target.to_index()]
+    DDIAG[source.to_usize()] == DDIAG[target.to_usize()]
 }
 
 #[inline(always)]
 pub(crate) const fn is_same_col(source: Square, target: Square) -> bool {
-   COLS[source.to_index()] == COLS[target.to_index()]
+   COLS[source.to_usize()] == COLS[target.to_usize()]
 }
 
 #[inline(always)]
 pub(crate) const fn is_same_row(source: Square, target: Square) -> bool {
-   ROWS[source.to_index()] == ROWS[target.to_index()]
+   ROWS[source.to_usize()] == ROWS[target.to_usize()]
 }
 /* ==== labels ==== */
 
@@ -361,6 +361,7 @@ pub(crate) const ADIAG: [usize; 64] = [
 
 
 /* ==== macros ==== */
+
 #[rustfmt::skip]
 #[macro_export] 
 macro_rules! opt_cpt {
@@ -379,6 +380,7 @@ macro_rules! opt_cpt {
     (_) => {None};
 }
 
+
 #[rustfmt::skip]
 #[macro_export]
 macro_rules! cpt {
@@ -395,6 +397,7 @@ macro_rules! cpt {
     (r) => {(Side::Black, PieceType::Rook  )};
     (p) => {(Side::Black, PieceType::Pawn  )};
 }
+
 
 #[rustfmt::skip]
 #[macro_export]

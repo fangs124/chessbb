@@ -1,6 +1,8 @@
 mod init;
 mod magic;
 
+use std::ops::Index;
+
 use crate::Side;
 use crate::bitboard::BitBoard;
 use crate::bitboard::attack::init::*;
@@ -8,6 +10,14 @@ use crate::bitboard::attack::magic::*;
 use crate::square::Square;
 
 /* last revised: 8/8/2025 */
+//this is still not const
+impl Index<Square> for [BitBoard; 64] {
+    type Output = BitBoard;
+
+    fn index(&self, index: Square) -> &Self::Output {
+        &self[index.to_usize()]
+    }
+}
 
 const W_PAWN_ATTACKS: [BitBoard; 64] = init_pawn_attack(Side::White);
 const B_PAWN_ATTACKS: [BitBoard; 64] = init_pawn_attack(Side::Black);
@@ -17,49 +27,49 @@ const KING_ATTACKS: [BitBoard; 64] = init_king_attack();
 #[inline(always)]
 pub const fn get_pawn_attack(square: Square, side: Side) -> BitBoard {
     match side {
-        Side::White => W_PAWN_ATTACKS[square.to_index()],
-        Side::Black => B_PAWN_ATTACKS[square.to_index()],
+        Side::White => W_PAWN_ATTACKS[square.to_usize()],
+        Side::Black => B_PAWN_ATTACKS[square.to_usize()],
     }
 }
 
 #[inline(always)]
 pub const fn get_w_pawn_attack(square: Square) -> BitBoard {
-    W_PAWN_ATTACKS[square.to_index()]
+    W_PAWN_ATTACKS[square.to_usize()]
 }
 
 #[inline(always)]
 pub const fn get_b_pawn_attack(square: Square) -> BitBoard {
-    B_PAWN_ATTACKS[square.to_index()]
+    B_PAWN_ATTACKS[square.to_usize()]
 }
 
 #[inline(always)]
 pub const fn get_knight_attack(square: Square) -> BitBoard {
-    KNIGHT_ATTACKS[square.to_index()]
+    KNIGHT_ATTACKS[square.to_usize()]
 }
 
 #[inline(always)]
 pub const fn get_king_attack(square: Square) -> BitBoard {
-    KING_ATTACKS[square.to_index()]
+    KING_ATTACKS[square.to_usize()]
 }
 
 #[inline(always)]
 pub const fn get_bishop_attack(square: Square, blockers: BitBoard) -> BitBoard {
     let m = magic_index(
-        BISHOP_MAGICS[square.to_index()],
-        blockers.bit_and(&BISHOP_MBB_MASK[square.to_index()]),
-        BISHOP_OCC_BITCOUNT[square.to_index()],
+        BISHOP_MAGICS[square.to_usize()],
+        blockers.bit_and(&BISHOP_MBB_MASK[square.to_usize()]),
+        BISHOP_OCC_BITCOUNT[square.to_usize()],
     );
-    return BISHOP_ATTACKS_MBB[square.to_index()][m];
+    return BISHOP_ATTACKS_MBB[square.to_usize()][m];
 }
 
 #[inline(always)]
 pub const fn get_rook_attack(square: Square, blockers: BitBoard) -> BitBoard {
     let m = magic_index(
-        ROOK_MAGICS[square.to_index()],
-        blockers.bit_and(&ROOK_MBB_MASK[square.to_index()]),
-        ROOK_OCC_BITCOUNT[square.to_index()],
+        ROOK_MAGICS[square.to_usize()],
+        blockers.bit_and(&ROOK_MBB_MASK[square.to_usize()]),
+        ROOK_OCC_BITCOUNT[square.to_usize()],
     );
-    return ROOK_ATTACKS_MBB[square.to_index()][m];
+    return ROOK_ATTACKS_MBB[square.to_usize()][m];
 }
 
 #[inline(always)]

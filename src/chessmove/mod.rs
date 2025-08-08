@@ -1,5 +1,4 @@
-use std::fmt::{Debug, Display};
-use std::ops::{Index, Not};
+use std::fmt::Debug;
 
 use crate::PieceType;
 use crate::bitboard::*;
@@ -62,7 +61,7 @@ impl Ord for ChessMove {
 //needed to sort chess moves
 impl PartialOrd for ChessMove {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.print_move().partial_cmp(&other.print_move())
+        Some(self.cmp(other))
     }
 }
 
@@ -91,8 +90,8 @@ pub(crate) enum MoveType {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) enum Castling {
-    KINGSIDE(Side),
-    QUEENSIDE(Side),
+    Kingside(Side),
+    Queenside(Side),
 }
 
 impl ChessMove {
@@ -116,10 +115,10 @@ impl ChessMove {
         };
 
         let castling: Castling = match ((self.data & 0b11_000000_000000u16) as usize) >> 12 {
-            0b00 => Castling::KINGSIDE(Side::White),
-            0b01 => Castling::QUEENSIDE(Side::White),
-            0b10 => Castling::KINGSIDE(Side::Black),
-            0b11 => Castling::QUEENSIDE(Side::Black),
+            0b00 => Castling::Kingside(Side::White),
+            0b01 => Castling::Queenside(Side::White),
+            0b10 => Castling::Kingside(Side::Black),
+            0b11 => Castling::Queenside(Side::Black),
             _ => unreachable!(),
         };
 
@@ -134,7 +133,7 @@ impl ChessMove {
 
     #[inline(always)]
     pub(crate) const fn set_source(&mut self, index: usize) {
-        self.data &= ((index << 0) & 0b111111) as u16;
+        self.data &= (index & 0b111111) as u16;
     }
 
     #[inline(always)]
@@ -147,14 +146,14 @@ impl ChessMove {
         // ps: !matches!(...) is ugly
         assert!(matches!(m, MoveType::Promotion(PieceType::King)) == false);
         assert!(matches!(m, MoveType::Promotion(PieceType::Pawn)) == false);
-        let mut data: u16 = (((s.to_index() << 0) & 0b111111) | ((t.to_index() << 6) & 0b111111_000000)) as u16;
+        let mut data: u16 = ((s.to_usize() & 0b111111) | ((t.to_usize() << 6) & 0b111111_000000)) as u16;
 
         let move_type_data: usize = match m {
             MoveType::Normal => 0b00_00,
-            MoveType::Castle(Castling::KINGSIDE(Side::White)) => 0b01_00,
-            MoveType::Castle(Castling::QUEENSIDE(Side::White)) => 0b01_01,
-            MoveType::Castle(Castling::KINGSIDE(Side::Black)) => 0b01_10,
-            MoveType::Castle(Castling::QUEENSIDE(Side::Black)) => 0b01_11,
+            MoveType::Castle(Castling::Kingside(Side::White)) => 0b01_00,
+            MoveType::Castle(Castling::Queenside(Side::White)) => 0b01_01,
+            MoveType::Castle(Castling::Kingside(Side::Black)) => 0b01_10,
+            MoveType::Castle(Castling::Queenside(Side::Black)) => 0b01_11,
             MoveType::EnPassant => 0b10_00,
             MoveType::Promotion(PieceType::Knight) => 0b11_00,
             MoveType::Promotion(PieceType::Bishop) => 0b11_01,
@@ -179,21 +178,24 @@ impl ChessMove {
     pub(crate) const W_KINGSIDE_CASTLE: ChessMove = ChessMove::new(
         Square::W_KING_SQUARE,
         Square::W_KINGSIDE_CASTLE_SQUARE,
-        MoveType::Castle(Castling::KINGSIDE(Side::White)),
+        MoveType::Castle(Castling::Kingside(Side::White)),
     );
+
     pub(crate) const W_QUEENSIDE_CASTLE: ChessMove = ChessMove::new(
         Square::W_KING_SQUARE,
         Square::W_QUEENSIDE_CASTLE_SQUARE,
-        MoveType::Castle(Castling::QUEENSIDE(Side::White)),
+        MoveType::Castle(Castling::Queenside(Side::White)),
     );
+
     pub(crate) const B_KINGSIDE_CASTLE: ChessMove = ChessMove::new(
         Square::B_KING_SQUARE,
         Square::B_KINGSIDE_CASTLE_SQUARE,
-        MoveType::Castle(Castling::KINGSIDE(Side::Black)),
+        MoveType::Castle(Castling::Kingside(Side::Black)),
     );
+
     pub(crate) const B_QUEENSIDE_CASTLE: ChessMove = ChessMove::new(
         Square::B_KING_SQUARE,
         Square::B_QUEENSIDE_CASTLE_SQUARE,
-        MoveType::Castle(Castling::QUEENSIDE(Side::Black)),
+        MoveType::Castle(Castling::Queenside(Side::Black)),
     );
 }

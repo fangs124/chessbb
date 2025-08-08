@@ -16,10 +16,9 @@ impl ChessBoard {
         if depth == 1 {
             return moves.len() as u64;
         }
-        let mut i: usize = 0;
         let mut total: u64 = 0;
         for chessmove in moves {
-            let mut new_chessboard = self.clone();
+            let mut new_chessboard: ChessBoard = *self;
             new_chessboard.update_state(chessmove);
             total += new_chessboard.perft_count(depth - 1);
         }
@@ -31,14 +30,14 @@ impl ChessBoard {
 impl ChessMove {
     pub fn print_move(&self) -> String {
         if let MoveType::Promotion(piece) = self.move_type() {
-            format!(
+            return format!(
                 "{}{}{}",
-                SQUARE_SYM[self.source().to_index()],
-                SQUARE_SYM[self.target().to_index()],
+                SQUARE_SYM[self.source().to_usize()],
+                SQUARE_SYM[self.target().to_usize()],
                 piece.to_uci_char()
-            )
+            );
         } else {
-            format!("{}{}", SQUARE_SYM[self.source().to_index()], SQUARE_SYM[self.target().to_index()])
+            return format!("{}{}", SQUARE_SYM[self.source().to_usize()], SQUARE_SYM[self.target().to_usize()]);
         }
     }
 }

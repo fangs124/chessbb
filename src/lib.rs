@@ -4,11 +4,9 @@ mod movegen;
 mod square;
 mod zorbist;
 mod perft;
+
 use std::fmt::Display;
-
 use crate::{bitboard::*, square::Square, zorbist::{ZorbistHash, ZorbistTable}};
-use crate::perft::*;
-
 /* re-export */
 pub use crate::chessmove::ChessMove; //FIXME
 pub use crate::bitboard::{Side, PieceType};
@@ -31,6 +29,8 @@ pub struct ChessBoard {
 }
 
 impl Default for ChessBoard {
+    
+    #[inline(always)]
     fn default() -> Self {
         ChessBoard::start_pos()
     }
@@ -67,12 +67,12 @@ impl Display for ChessBoard {
                 s.push('\n');
             }
         }
-        write!(f, "{}", s)
+        return write!(f, "{s}")
     }
 }
 
 impl ChessBoard {
-    #[allow(clippy::implicit_return)]
+    
     pub const fn start_pos() -> Self {
         Self {
             piece_bbs: ChessBoard::INITIAL_CHESS_POS,
@@ -136,7 +136,7 @@ impl ChessBoard {
                 }
 
                 '/' => continue,
-                _ => panic!("from_fen error: invalid char in piece placement portion. char: {}", c)
+                _ => panic!("from_fen error: invalid char in piece placement portion. char: {c}")
             }
             square += 1;
         }
@@ -189,15 +189,15 @@ impl ChessBoard {
                     let king_pos= chessboard.piece_bbs[0].lsb_square().unwrap();
                     let mut check_bitboard = BitBoard::ZERO;
                     //q
-                    check_bitboard = check_bitboard | (chessboard.piece_bbs[07] & get_queen_attack(king_pos, blockers));
+                    check_bitboard |= (chessboard.piece_bbs[07] & get_queen_attack(king_pos, blockers));
                     //n
-                    check_bitboard = check_bitboard | (chessboard.piece_bbs[08] & get_knight_attack(king_pos));
+                    check_bitboard |= (chessboard.piece_bbs[08] & get_knight_attack(king_pos));
                     //b
-                    check_bitboard = check_bitboard | (chessboard.piece_bbs[09] & get_bishop_attack(king_pos, blockers));
+                    check_bitboard |= (chessboard.piece_bbs[09] & get_bishop_attack(king_pos, blockers));
                     //r
-                    check_bitboard = check_bitboard | (chessboard.piece_bbs[10] & get_rook_attack(king_pos, blockers));
+                    check_bitboard |= (chessboard.piece_bbs[10] & get_rook_attack(king_pos, blockers));
                     //p
-                    check_bitboard = check_bitboard | (chessboard.piece_bbs[11] & get_w_pawn_attack(king_pos));
+                    check_bitboard |= (chessboard.piece_bbs[11] & get_w_pawn_attack(king_pos));
                     chessboard.check_bb = check_bitboard;
                 }
 
@@ -206,15 +206,15 @@ impl ChessBoard {
                     let king_pos = chessboard.piece_bbs[6].lsb_square().unwrap();
                     let mut check_bitboard = BitBoard::ZERO;
                     //Q
-                    check_bitboard = check_bitboard | (chessboard.piece_bbs[01] & get_queen_attack(king_pos, blockers));
+                    check_bitboard |= (chessboard.piece_bbs[01] & get_queen_attack(king_pos, blockers));
                     //N
-                    check_bitboard = check_bitboard | (chessboard.piece_bbs[02] & get_knight_attack(king_pos));
+                    check_bitboard |= (chessboard.piece_bbs[02] & get_knight_attack(king_pos));
                     //B
-                    check_bitboard = check_bitboard | (chessboard.piece_bbs[03] & get_bishop_attack(king_pos, blockers));
+                    check_bitboard |= (chessboard.piece_bbs[03] & get_bishop_attack(king_pos, blockers));
                     //R
-                    check_bitboard = check_bitboard | (chessboard.piece_bbs[04] & get_rook_attack(king_pos, blockers));
+                    check_bitboard |= (chessboard.piece_bbs[04] & get_rook_attack(king_pos, blockers));
                     //P
-                    check_bitboard = check_bitboard | (chessboard.piece_bbs[05] & get_b_pawn_attack(king_pos));
+                    check_bitboard |= (chessboard.piece_bbs[05] & get_b_pawn_attack(king_pos));
                     chessboard.check_bb = check_bitboard;
                 }
             }
@@ -228,25 +228,25 @@ impl ChessBoard {
     
     //TODO rewrite this
     pub const fn square_index(square_name: &str) -> usize {
-    let mut i: usize = 0;
-    while i < 64 {
-        let mut j: usize = 0;
-        let mut is_match = SQUARE_SYM[i].as_bytes().len() == square_name.as_bytes().len();
-        while j < SQUARE_SYM[i].as_bytes().len() {
-            if SQUARE_SYM[i].as_bytes()[j] != square_name.as_bytes()[j] {
-                is_match = false;
+        let mut i: usize = 0;
+        while i < 64 {
+            let mut j: usize = 0;
+            let mut is_match = SQUARE_SYM[i].len() == square_name.len();
+            while j < SQUARE_SYM[i].len() {
+                if SQUARE_SYM[i].as_bytes()[j] != square_name.as_bytes()[j] {
+                    is_match = false;
+                }
+                j += 1;
             }
-            j += 1;
+            if is_match {
+                return i;
+            }
+            i += 1
         }
-        if is_match {
-            return i;
-        }
-        i += 1
+        panic!("square_index error: invalid square!");
     }
-    panic!("square_index error: invalid square!");
-}
 
-
+    
     pub const fn duplicate(&self) -> ChessBoard {
         ChessBoard {
             piece_bbs: self.piece_bbs,
@@ -303,7 +303,7 @@ impl ChessBoard {
         }
         return bitboard;
     }
-
+    
     pub const fn black_blockers(&self) -> BitBoard {
         let mut i = 6;
         let mut bitboard: BitBoard = BitBoard::ZERO;
@@ -314,10 +314,14 @@ impl ChessBoard {
         return bitboard;
     }
 
+    
+    #[inline(always)]
     pub(crate) const fn current_hash(&self) -> ZorbistHash {
         self.zorbist_table.last_hash()
     }
 
+    
+    #[inline(always)]
     pub(crate) const fn count_hash(&self, hash: ZorbistHash) -> usize {
         self.zorbist_table.count_hash(hash)
     }
@@ -367,7 +371,7 @@ impl ChessBoard {
     //    }
     //}
 
-    pub const fn is_king_in_check(&self, king_side: Side) -> bool {
+    pub(crate) const fn is_king_in_check(&self, king_side: Side) -> bool {
         let i = match king_side {
             Side::White => 0,
             Side::Black => 6,
@@ -378,11 +382,11 @@ impl ChessBoard {
             None => panic!("king_is_in_check error: king not found!"),
         };
 
-        self.is_square_attacked(square, self.side_to_move.update(), self.blockers())
+        return self.is_square_attacked(square, self.side_to_move.update(), self.blockers())
     }
 
     // castling kingside
-    pub fn is_able_kingside_castle(&self, side: Side) -> bool {
+    pub(crate) fn is_able_kingside_castle(&self, side: Side) -> bool {
         let king_square: Square;
         let rook_square: Square;
         let castling_mask: BitBoard;
@@ -424,7 +428,7 @@ impl ChessBoard {
         }
 
         // check if squares between rook and king are empty
-        if RAYS[king_square.to_index()][rook_square.to_index()].bit_and(&blockers).is_not_zero() {
+        if RAYS[king_square.to_usize()][rook_square.to_usize()].bit_and(&blockers).is_not_zero() {
             return false;
         }
 
@@ -440,7 +444,7 @@ impl ChessBoard {
     }
     
     // castling queenside
-    pub fn is_able_queenside_castle(&self, side: Side) -> bool {
+    pub(crate) fn is_able_queenside_castle(&self, side: Side) -> bool {
         let king_square: Square;
         let rook_square: Square;
         let castling_mask: BitBoard;
@@ -482,7 +486,7 @@ impl ChessBoard {
         }
 
         // check if squares between rook and king are empty
-        if RAYS[king_square.to_index()][rook_square.to_index()].bit_and(&blockers).is_not_zero() {
+        if RAYS[king_square.to_usize()][rook_square.to_usize()].bit_and(&blockers).is_not_zero() {
             return false;
         }
 
@@ -497,6 +501,8 @@ impl ChessBoard {
         return true;
     }
     
+    
+    #[inline(always)]
     pub(crate) fn is_piece_pinned(&self, square: Square) -> bool {
         self.pinned_bb.nth_is_not_zero(square)
     }
@@ -508,19 +514,23 @@ impl ChessBoard {
         while pinners.is_not_zero() {
             let pinner = pinners.lsb_square().unwrap();
             // check if square is between king and potential_pinner
-            if RAYS[self.king_square().to_index()][pinner.to_index()].nth_is_not_zero(square) {
-                pin_mask = pin_mask.bit_or(&RAYS[self.king_square().to_index()][pinner.to_index()].bit_or(&BitBoard::nth(pinner)))
+            if RAYS[self.king_square().to_usize()][pinner.to_usize()].nth_is_not_zero(square) {
+                pin_mask = pin_mask.bit_or(&RAYS[self.king_square().to_usize()][pinner.to_usize()].bit_or(&BitBoard::nth(pinner)))
             }
             pinners.pop_bit(pinner);
         }
         return pin_mask;
     } 
     
+    
+    #[inline(always)]
     // calculates number of enemy checking piece
-    pub(crate) fn count_checking_pieces(&self) -> u32 {
+    pub(crate) const fn count_checking_pieces(&self) -> u32 {
         self.check_bb.count_ones()
     }
 
+    
+    #[inline(always)]
     pub(crate) const fn king_square(&self) -> Square {
         match self.side_to_move {
             Side::White => self.piece_bbs[cpt_index!(K)].lsb_square().expect("king_square: king must be present"),
@@ -528,7 +538,8 @@ impl ChessBoard {
         }
     }
 
-    #[allow(clippy::implicit_return)]
+    
+    #[inline(always)]
     pub const fn piece_bb(&self, piece_type: ChessPiece) -> BitBoard {
         match piece_type {
             (Side::White, PieceType::King  ) => self.piece_bbs[00],
@@ -546,6 +557,8 @@ impl ChessBoard {
         }
     }
 
+    
+    #[inline(always)]
     pub const fn mailbox(&self) -> [Option<(bitboard::Side, bitboard::PieceType)>; 64] {
         self.mailbox
     }

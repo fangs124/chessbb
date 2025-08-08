@@ -3,7 +3,10 @@ use super::*;
 
 fn calculate_attacks(cb: &ChessBoard, s: Square, p: PieceType) -> Vec<ChessMove> {
     //pawn rules are complex, best handled separately, use calculate_pawn_moves(...)
-    assert!(p != PieceType::Pawn);
+    //assert!(p != PieceType::Pawn);
+    if matches!(p, PieceType::Pawn) {
+        return calculate_pawn_moves(cb, s);
+    }
 
     let source = s;
     let piece_type = p;
@@ -105,19 +108,19 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
                 || (((is_same_adiag(source, square) && is_same_adiag(king_square, source))
                     || (is_same_ddiag(source, square) && is_same_ddiag(king_square, source)))
                     && matches!(
-                        chessboard.mailbox[square.to_index()].unwrap(),
+                        chessboard.mailbox[square.to_usize()].unwrap(),
                         (_, PieceType::Bishop) | (_, PieceType::Queen)
                     ));
             is_pinned_vert = is_pinned_vert
                 || ((is_same_col(source, square) && is_same_col(king_square, source))
                     && matches!(
-                        chessboard.mailbox[square.to_index()].unwrap(),
+                        chessboard.mailbox[square.to_usize()].unwrap(),
                         (_, PieceType::Rook) | (_, PieceType::Queen)
                     ));
             is_pinned_horz = is_pinned_horz
                 || ((is_same_row(source, square) && is_same_row(king_square, source))
                     && matches!(
-                        chessboard.mailbox[square.to_index()].unwrap(),
+                        chessboard.mailbox[square.to_usize()].unwrap(),
                         (_, PieceType::Rook) | (_, PieceType::Queen)
                     ));
             pinners.pop_bit(square);
@@ -139,7 +142,7 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
             //FIXME assumption checkers_count == 1
             // can only move one-square if not in check, or blocks check
             if check_mask.is_zero() || check_mask.nth_is_not_zero(target) {
-                match (ROWS[target.to_index()] == promotion_row) {
+                match (ROWS[target.to_usize()] == promotion_row) {
                     true => moves.append(&mut ChessMove::promotions(source, target).to_vec()),
                     false => moves.push(ChessMove::new(source, target, MoveType::Normal)),
                 }
@@ -152,7 +155,7 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
             Side::Black => 6,
         };
 
-        if ROWS[source.to_index()] == starting_row {
+        if ROWS[source.to_usize()] == starting_row {
             let target = match side {
                 Side::White => Square::new(source.to_u8() + 16),
                 Side::Black => Square::new(source.to_u8() - 16),
@@ -189,17 +192,17 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
             //can only attack a square if not in check or attack blocks check
             if check_mask.is_zero() || (check_mask.nth_is_not_zero(attack)) {
                 //FIXME make this less ugly
-                let is_same_diagonal = (DDIAG[source.to_index()] == DDIAG[attack.to_index()]
-                    && DDIAG[attack.to_index()] == DDIAG[king_square.to_index()])
-                    || ADIAG[source.to_index()] == ADIAG[attack.to_index()]
-                        && ADIAG[attack.to_index()] == ADIAG[king_square.to_index()];
+                let is_same_diagonal = (DDIAG[source.to_usize()] == DDIAG[attack.to_usize()]
+                    && DDIAG[attack.to_usize()] == DDIAG[king_square.to_usize()])
+                    || ADIAG[source.to_usize()] == ADIAG[attack.to_usize()]
+                        && ADIAG[attack.to_usize()] == ADIAG[king_square.to_usize()];
                 let is_attack_pinner = pinners.nth_is_not_zero(attack) && is_same_diagonal;
                 //if source == Square::new(43) {
                 //    println!("is_same_diagonal:{}", is_same_diagonal);
                 //}
                 //can only attack a square if not pinned or capturing piece pinning the pawn
                 if pin_mask.is_zero() || is_attack_pinner {
-                    match (ROWS[attack.to_index()] == promotion_row) {
+                    match (ROWS[attack.to_usize()] == promotion_row) {
                         true => moves.append(&mut ChessMove::promotions(source, attack).to_vec()),
                         false => moves.push(ChessMove::new(source, attack, MoveType::Normal)),
                     }
@@ -236,8 +239,8 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
             // . . . | .
             // . . . x .
 
-            let pawn_row_bb = BitBoard::new(0b11111111u64 << (8 * (ROWS[source.to_index()])));
-            let king_row_bb = BitBoard::new(0b11111111u64 << (8 * (ROWS[king_square.to_index()])));
+            let pawn_row_bb = BitBoard::new(0b11111111u64 << (8 * (ROWS[source.to_usize()])));
+            let king_row_bb = BitBoard::new(0b11111111u64 << (8 * (ROWS[king_square.to_usize()])));
             let king_index;
             let enemy_rook_index;
             let enemy_pawn_index;
@@ -329,9 +332,9 @@ impl ChessBoard {
         let mut enpassant_bb: BitBoard = BitBoard::ZERO;
         let source: Square = chess_move.source();
         let target: Square = chess_move.target();
-        let source_piece = self.mailbox[source.to_index()].expect("update_state error: source mailbox is None");
+        let source_piece = self.mailbox[source.to_usize()].expect("update_state error: source mailbox is None");
         let source_index = cp_index(source_piece);
-        let target_piece = self.mailbox[target.to_index()];
+        let target_piece = self.mailbox[target.to_usize()];
 
         let mut current_hash = self.current_hash();
         current_hash ^= ZorbistHash::compute_enpassant_hash(self.enpassant_bb);
@@ -343,21 +346,21 @@ impl ChessBoard {
             /* castling */
             (Side::White, PieceType::King) => {
                 if self.castle_bools[0] {
-                    current_hash ^= ZorbistHash::castle_hash(Castling::KINGSIDE(Side::White));
+                    current_hash ^= ZorbistHash::castle_hash(Castling::Kingside(Side::White));
                 }
                 self.castle_bools[0] = false;
                 if self.castle_bools[1] {
-                    current_hash ^= ZorbistHash::castle_hash(Castling::QUEENSIDE(Side::White));
+                    current_hash ^= ZorbistHash::castle_hash(Castling::Queenside(Side::White));
                 }
                 self.castle_bools[1] = false;
             }
             (Side::Black, PieceType::King) => {
                 if self.castle_bools[2] {
-                    current_hash ^= ZorbistHash::castle_hash(Castling::KINGSIDE(Side::Black));
+                    current_hash ^= ZorbistHash::castle_hash(Castling::Kingside(Side::Black));
                 }
                 self.castle_bools[2] = false;
                 if self.castle_bools[3] {
-                    current_hash ^= ZorbistHash::castle_hash(Castling::QUEENSIDE(Side::Black));
+                    current_hash ^= ZorbistHash::castle_hash(Castling::Queenside(Side::Black));
                 }
                 self.castle_bools[3] = false;
             }
@@ -365,12 +368,12 @@ impl ChessBoard {
                 //FIXME
                 if source == Square::new(0) {
                     if self.castle_bools[0] {
-                        current_hash ^= ZorbistHash::castle_hash(Castling::KINGSIDE(Side::White));
+                        current_hash ^= ZorbistHash::castle_hash(Castling::Kingside(Side::White));
                     }
                     self.castle_bools[0] = false;
                 } else if source == Square::new(7) {
                     if self.castle_bools[1] {
-                        current_hash ^= ZorbistHash::castle_hash(Castling::QUEENSIDE(Side::White));
+                        current_hash ^= ZorbistHash::castle_hash(Castling::Queenside(Side::White));
                     }
                     self.castle_bools[1] = false
                 }
@@ -379,12 +382,12 @@ impl ChessBoard {
                 //FIXME
                 if source == Square::new(56) {
                     if self.castle_bools[2] {
-                        current_hash ^= ZorbistHash::castle_hash(Castling::KINGSIDE(Side::Black));
+                        current_hash ^= ZorbistHash::castle_hash(Castling::Kingside(Side::Black));
                     }
                     self.castle_bools[2] = false;
                 } else if source == Square::new(63) {
                     if self.castle_bools[3] {
-                        current_hash ^= ZorbistHash::castle_hash(Castling::QUEENSIDE(Side::Black));
+                        current_hash ^= ZorbistHash::castle_hash(Castling::Queenside(Side::Black));
                     }
                     self.castle_bools[3] = false
                 }
@@ -396,14 +399,14 @@ impl ChessBoard {
                 self.fifty_move_rule_counter = 0;
                 is_counter_reset = true;
                 //if move is a 2-square pawn move, update en-passant bitboard
-                if source.to_index() + 16 == target.to_index() {
+                if source.to_usize() + 16 == target.to_usize() {
                     //FIXME Square::new(_) ugliness, logical ugliness
-                    if (self.mailbox[target.to_index() + 1] == opt_cpt!(p)
+                    if (self.mailbox[target.to_usize() + 1] == opt_cpt!(p)
                         && (self.is_piece_pinned(Square::new(target.to_u8() + 1)) == false)
-                        && (COLS[source.to_index()] != 7))
-                        || self.mailbox[target.to_index() - 1] == opt_cpt!(p)
+                        && (COLS[source.to_usize()] != 7))
+                        || self.mailbox[target.to_usize() - 1] == opt_cpt!(p)
                             && (self.is_piece_pinned(Square::new(target.to_u8() - 1)) == false
-                                && (COLS[source.to_index()] != 0))
+                                && (COLS[source.to_usize()] != 0))
                     {
                         let enpassant_square = Square::new(target.to_u8() - 8);
                         enpassant_bb.set_bit(enpassant_square);
@@ -416,14 +419,14 @@ impl ChessBoard {
                 self.fifty_move_rule_counter = 0;
                 is_counter_reset = true;
                 //if move is a 2-square pawn move, update en-passant bitboard
-                if source.to_index() == target.to_index() + 16 {
+                if source.to_usize() == target.to_usize() + 16 {
                     //FIXME Square::new(_) ugliness, logical ugliness
-                    if (self.mailbox[target.to_index() + 1] == opt_cpt!(P)
+                    if (self.mailbox[target.to_usize() + 1] == opt_cpt!(P)
                         && (self.is_piece_pinned(Square::new(target.to_u8() + 1)) == false)
-                        && (COLS[source.to_index()] != 7))
-                        || self.mailbox[target.to_index() - 1] == opt_cpt!(P)
+                        && (COLS[source.to_usize()] != 7))
+                        || self.mailbox[target.to_usize() - 1] == opt_cpt!(P)
                             && (self.is_piece_pinned(Square::new(target.to_u8() - 1)) == false
-                                && (COLS[source.to_index()] != 0))
+                                && (COLS[source.to_usize()] != 0))
                     {
                         let enpassant_square = Square::new(target.to_u8() + 8);
                         enpassant_bb.set_bit(enpassant_square);
@@ -438,8 +441,8 @@ impl ChessBoard {
         self.piece_bbs[source_index].set_bit(target);
         current_hash ^= ZorbistHash::piece_hash(source, source_piece);
         current_hash ^= ZorbistHash::piece_hash(target, source_piece);
-        self.mailbox[source.to_index()] = None;
-        self.mailbox[target.to_index()] = Some(source_piece);
+        self.mailbox[source.to_usize()] = None;
+        self.mailbox[target.to_usize()] = Some(source_piece);
 
         //additional book keeping
         match chess_move.move_type() {
@@ -458,25 +461,25 @@ impl ChessBoard {
                     match (target_piece, target.to_u8()) {
                         (cpt!(R), 00u8) => {
                             if self.castle_bools[0] {
-                                current_hash ^= ZorbistHash::castle_hash(Castling::KINGSIDE(Side::White));
+                                current_hash ^= ZorbistHash::castle_hash(Castling::Kingside(Side::White));
                             }
                             self.castle_bools[0] = false;
                         }
                         (cpt!(R), 07u8) => {
                             if self.castle_bools[1] {
-                                current_hash ^= ZorbistHash::castle_hash(Castling::QUEENSIDE(Side::White));
+                                current_hash ^= ZorbistHash::castle_hash(Castling::Queenside(Side::White));
                             }
                             self.castle_bools[1] = false;
                         }
                         (cpt!(r), 56u8) => {
                             if self.castle_bools[2] {
-                                current_hash ^= ZorbistHash::castle_hash(Castling::KINGSIDE(Side::Black));
+                                current_hash ^= ZorbistHash::castle_hash(Castling::Kingside(Side::Black));
                             }
                             self.castle_bools[2] = false;
                         }
                         (cpt!(r), 63u8) => {
                             if self.castle_bools[3] {
-                                current_hash ^= ZorbistHash::castle_hash(Castling::QUEENSIDE(Side::Black));
+                                current_hash ^= ZorbistHash::castle_hash(Castling::Queenside(Side::Black));
                             }
                             self.castle_bools[3] = false;
                         }
@@ -495,52 +498,52 @@ impl ChessBoard {
                 let black_queenside_rook_sq_source: Square = Square::new(63);
                 let black_queenside_rook_sq_target: Square = Square::new(60);
                 match castling {
-                    Castling::KINGSIDE(Side::White) => {
+                    Castling::Kingside(Side::White) => {
                         // check if rook is present
                         assert!(self.piece_bbs[04].nth_is_not_zero(white_kingside_rook_sq_source));
                         self.piece_bbs[04].pop_bit(white_kingside_rook_sq_source);
                         self.piece_bbs[04].set_bit(white_kingside_rook_sq_target);
-                        self.mailbox[white_kingside_rook_sq_source.to_index()] = None;
-                        self.mailbox[white_kingside_rook_sq_target.to_index()] = opt_cpt!(R);
+                        self.mailbox[white_kingside_rook_sq_source.to_usize()] = None;
+                        self.mailbox[white_kingside_rook_sq_target.to_usize()] = opt_cpt!(R);
 
                         //update hash
                         current_hash ^= ZorbistHash::piece_hash(white_kingside_rook_sq_source, cpt!(R));
                         current_hash ^= ZorbistHash::piece_hash(white_kingside_rook_sq_target, cpt!(R));
                     }
 
-                    Castling::QUEENSIDE(Side::White) => {
+                    Castling::Queenside(Side::White) => {
                         // check if rook is present
                         assert!(self.piece_bbs[04].nth_is_not_zero(white_queenside_rook_sq_source));
                         self.piece_bbs[04].pop_bit(white_queenside_rook_sq_source);
                         self.piece_bbs[04].set_bit(white_queenside_rook_sq_target);
-                        self.mailbox[white_queenside_rook_sq_source.to_index()] = None;
-                        self.mailbox[white_queenside_rook_sq_target.to_index()] = opt_cpt!(R);
+                        self.mailbox[white_queenside_rook_sq_source.to_usize()] = None;
+                        self.mailbox[white_queenside_rook_sq_target.to_usize()] = opt_cpt!(R);
 
                         //update hash
                         current_hash ^= ZorbistHash::piece_hash(white_queenside_rook_sq_source, cpt!(R));
                         current_hash ^= ZorbistHash::piece_hash(white_queenside_rook_sq_target, cpt!(R));
                     }
 
-                    Castling::KINGSIDE(Side::Black) => {
+                    Castling::Kingside(Side::Black) => {
                         // check if rook is present
                         assert!(self.piece_bbs[10].nth_is_not_zero(black_kingside_rook_sq_source));
                         self.piece_bbs[10].pop_bit(black_kingside_rook_sq_source);
                         self.piece_bbs[10].set_bit(black_kingside_rook_sq_target);
-                        self.mailbox[black_kingside_rook_sq_source.to_index()] = None;
-                        self.mailbox[black_kingside_rook_sq_target.to_index()] = opt_cpt!(r);
+                        self.mailbox[black_kingside_rook_sq_source.to_usize()] = None;
+                        self.mailbox[black_kingside_rook_sq_target.to_usize()] = opt_cpt!(r);
 
                         //update hash
                         current_hash ^= ZorbistHash::piece_hash(black_kingside_rook_sq_source, cpt!(r));
                         current_hash ^= ZorbistHash::piece_hash(black_kingside_rook_sq_target, cpt!(r));
                     }
 
-                    Castling::QUEENSIDE(Side::Black) => {
+                    Castling::Queenside(Side::Black) => {
                         // check if rook is present
                         assert!(self.piece_bbs[10].nth_is_not_zero(black_queenside_rook_sq_source));
                         self.piece_bbs[10].pop_bit(black_queenside_rook_sq_source);
                         self.piece_bbs[10].set_bit(black_queenside_rook_sq_target);
-                        self.mailbox[black_queenside_rook_sq_source.to_index()] = None;
-                        self.mailbox[black_queenside_rook_sq_target.to_index()] = opt_cpt!(r);
+                        self.mailbox[black_queenside_rook_sq_source.to_usize()] = None;
+                        self.mailbox[black_queenside_rook_sq_target.to_usize()] = opt_cpt!(r);
 
                         //update hash
                         current_hash ^= ZorbistHash::piece_hash(black_queenside_rook_sq_source, cpt!(r));
@@ -556,25 +559,25 @@ impl ChessBoard {
                 match self.side_to_move {
                     Side::White => {
                         enemy_pawn_index = 11;
-                        enemy_pawn_square = Square::new((target.to_index() - 8) as u8);
+                        enemy_pawn_square = Square::new((target.to_usize() - 8) as u8);
                         enemy_piece = (Side::Black, PieceType::Pawn);
                     }
                     Side::Black => {
                         enemy_pawn_index = 05;
-                        enemy_pawn_square = Square::new((target.to_index() + 8) as u8);
+                        enemy_pawn_square = Square::new((target.to_usize() + 8) as u8);
                         enemy_piece = (Side::White, PieceType::Pawn);
                     }
                 }
 
                 assert!(self.piece_bbs[enemy_pawn_index].nth_is_not_zero(enemy_pawn_square));
                 assert!(
-                    self.mailbox[enemy_pawn_square.to_index()] == opt_cpt!(p)
-                        || self.mailbox[enemy_pawn_square.to_index()] == opt_cpt!(P)
+                    self.mailbox[enemy_pawn_square.to_usize()] == opt_cpt!(p)
+                        || self.mailbox[enemy_pawn_square.to_usize()] == opt_cpt!(P)
                 );
 
                 self.piece_bbs[enemy_pawn_index].pop_bit(enemy_pawn_square);
                 current_hash ^= ZorbistHash::piece_hash(enemy_pawn_square, enemy_piece);
-                self.mailbox[enemy_pawn_square.to_index()] = None;
+                self.mailbox[enemy_pawn_square.to_usize()] = None;
             }
 
             MoveType::Promotion(piece_type) => {
@@ -595,25 +598,25 @@ impl ChessBoard {
                     match (target_piece, target.to_u8()) {
                         (cpt!(R), 00u8) => {
                             if self.castle_bools[0] {
-                                current_hash ^= ZorbistHash::castle_hash(Castling::KINGSIDE(Side::White));
+                                current_hash ^= ZorbistHash::castle_hash(Castling::Kingside(Side::White));
                             }
                             self.castle_bools[0] = false;
                         }
                         (cpt!(R), 07u8) => {
                             if self.castle_bools[1] {
-                                current_hash ^= ZorbistHash::castle_hash(Castling::QUEENSIDE(Side::White));
+                                current_hash ^= ZorbistHash::castle_hash(Castling::Queenside(Side::White));
                             }
                             self.castle_bools[1] = false;
                         }
                         (cpt!(r), 56u8) => {
                             if self.castle_bools[2] {
-                                current_hash ^= ZorbistHash::castle_hash(Castling::KINGSIDE(Side::Black));
+                                current_hash ^= ZorbistHash::castle_hash(Castling::Kingside(Side::Black));
                             }
                             self.castle_bools[2] = false;
                         }
                         (cpt!(r), 63u8) => {
                             if self.castle_bools[3] {
-                                current_hash ^= ZorbistHash::castle_hash(Castling::QUEENSIDE(Side::Black));
+                                current_hash ^= ZorbistHash::castle_hash(Castling::Queenside(Side::Black));
                             }
                             self.castle_bools[3] = false;
                         }
@@ -628,7 +631,7 @@ impl ChessBoard {
                 //add the promoted piece
                 self.piece_bbs[promoted_index].set_bit(target);
                 current_hash ^= ZorbistHash::piece_hash(target, promoted_piece);
-                self.mailbox[target.to_index()] = Some(promoted_piece);
+                self.mailbox[target.to_usize()] = Some(promoted_piece);
             }
         }
 
@@ -708,8 +711,6 @@ impl ChessBoard {
                         moves.append(&mut calculate_attacks(self, source, piece_type));
                     }
 
-                    PieceType::Pawn => moves.append(&mut calculate_pawn_moves(self, source)),
-
                     _ => moves.append(&mut calculate_attacks(self, source, piece_type)),
                 }
                 sources.pop_bit(source);
@@ -781,12 +782,12 @@ impl ChessBoard {
         }
 
         assert!(self.piece_bbs[king_index].count_ones() == 1);
-        king_square = self.piece_bbs[king_index].lsb_square().unwrap();
+        let king_square = self.piece_bbs[king_index].lsb_square().unwrap();
         let mut possible_pinners = (get_bishop_attack(king_square, diagonal_enemies).bit_and(&diagonal_enemies))
             .bit_or(&get_rook_attack(king_square, lateral_enemies).bit_and(&lateral_enemies));
         while possible_pinners.is_not_zero() {
             let possible_pinner = possible_pinners.lsb_square().unwrap();
-            let pinner_piece = self.mailbox[possible_pinner.to_index()].unwrap();
+            let pinner_piece = self.mailbox[possible_pinner.to_usize()].unwrap();
             let attack_mask = match pinner_piece {
                 (_, PieceType::Bishop) => get_bishop_attack(possible_pinner, enemies),
                 (_, PieceType::Rook) => get_rook_attack(possible_pinner, enemies),
@@ -794,9 +795,9 @@ impl ChessBoard {
                 _ => panic!(),
             };
             let enemy_blocker =
-                RAYS[king_square.to_index()][possible_pinner.to_index()].bit_and(&enemies).bit_and(&attack_mask);
+                RAYS[king_square.to_usize()][possible_pinner.to_usize()].bit_and(&enemies).bit_and(&attack_mask);
             let possible_pinned =
-                RAYS[king_square.to_index()][possible_pinner.to_index()].bit_and(&friends).bit_and(&attack_mask);
+                RAYS[king_square.to_usize()][possible_pinner.to_usize()].bit_and(&friends).bit_and(&attack_mask);
             //a piece is only pinned if its the only one between the pinner and the king. enemy can also block the line of sight.
             if possible_pinned.count_ones() == 1 && enemy_blocker.count_ones() == 0 {
                 pinner_bb = pinner_bb.bit_or(&BitBoard::nth(possible_pinner));
@@ -814,11 +815,11 @@ impl ChessBoard {
         let mut check_mask = check_bb;
         while check_bb.is_not_zero() {
             let checker_square = check_bb.lsb_square().unwrap();
-            match self.mailbox[checker_square.to_index()].expect("generate_moves: checker mailbox is empty") {
+            match self.mailbox[checker_square.to_usize()].expect("generate_moves: checker mailbox is empty") {
                 cpt!(K) | cpt!(k) => panic!("generate_moves: king is in check by another king!"),
                 cpt!(N) | cpt!(n) => (),
                 _ => {
-                    check_mask = check_mask.bit_or(&RAYS[checker_square.to_index()][self.king_square().to_index()]);
+                    check_mask = check_mask.bit_or(&RAYS[checker_square.to_usize()][self.king_square().to_usize()]);
                 }
             }
             check_bb.pop_bit(checker_square);

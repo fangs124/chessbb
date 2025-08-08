@@ -11,7 +11,7 @@ fn main() {
     let start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     //
     let datas = [];
-    let moves = datas.map(|x| ChessMove { data: x });
+    let moves = datas.map(|x| return ChessMove { data: x });
     let mut chessboard = ChessBoard::from_fen(start_fen);
     for chessmove in moves {
         chessboard.update_state(chessmove);
@@ -130,7 +130,7 @@ fn main() {
     //println!("chessboard.check_bb:\n{}\n", chessboard.check_bb);
     //println!("chessboard.check_mask:\n{}\n", chessboard.check_mask);
     println!("==== start position ====\n");
-    println!("{}", chessboard);
+    println!("{chessboard}");
     let mut result_str_vec = Vec::<String>::new();
     for chessmove in moves {
         let mut s = chessmove.print_move();
@@ -138,7 +138,7 @@ fn main() {
         result_str_vec.push(s);
     }
     for result_str in result_str_vec {
-        println!("{}", result_str);
+        println!("{result_str}");
     }
     println!();
     println!("========================");
@@ -162,13 +162,13 @@ fn main() {
             let mut state = chessboard.duplicate();
             state.update_state(chessmove);
             let branch_total = state.perft_count(depth - 1);
-            s.push_str(format!(" - {}", branch_total).as_str());
+            s.push_str(format!(" - {branch_total}").as_str());
             result_str_vec.push(s);
         }
-        println!("depth: {}, time: {}ms, total: {}", depth, elapsed.as_millis(), total);
+        println!("depth: {depth}, time: {}ms, total: {total}", elapsed.as_millis());
 
         for result_str in result_str_vec {
-            println!("{}", result_str);
+            println!("{result_str}");
         }
         println!("\n");
         depth += 1;
