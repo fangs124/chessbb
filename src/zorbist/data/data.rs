@@ -1,221 +1,21 @@
-use crate::chessmove::Castling;
-use crate::{ChessBoard, square::Square};
-use crate::{bitboard::*, square, zorbist};
-
-use std::hint::assert_unchecked;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(super) struct ZorbistHash {
-    value: u64,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(super) struct ZorbistTable {
-    data: [ZorbistHash; 1 << 14],
-    index: usize,
-}
-
-impl ZorbistTable {
-    pub(super) const fn new(hash: ZorbistHash) -> ZorbistTable {
-        let mut data: [ZorbistHash; 1 << 14] = [ZorbistHash { value: 0 }; 1 << 14];
-        data[0] = hash;
-        ZorbistTable { data, index: 0 }
-    }
-
-    pub(super) const fn initial_table() -> ZorbistTable {
-        ZorbistTable::new(ZorbistHash::initial_hash())
-    }
-
-    pub(super) const fn add(&mut self, hash: ZorbistHash) {
-        assert!(self.index < (1 << 14));
-        self.index += 1;
-        self.data[self.index] = hash;
-    }
-
-    pub(super) const fn last_hash(&self) -> ZorbistHash {
-        self.data[self.index]
-    }
-
-    pub(super) const fn count_hash(&self, hash: ZorbistHash) -> usize {
-        let mut i: usize = 0;
-        let mut count: usize = 0;
-        while i <= self.index {
-            if self.data[i].value == hash.value {
-                count += 1;
-            }
-            i += 1
-        }
-        return count;
-    }
-}
-
-impl ZorbistHash {
-    pub(super) const fn new(value: u64) -> ZorbistHash {
-        ZorbistHash { value }
-    }
-
-    pub(super) const fn initial_hash() -> ZorbistHash {
-        let mut value: u64 = 0;
-
-        //starting side is white, no hash
-        //no en-passant in starting position either
-
-        //piece hash
-        let mut i: usize = 0;
-        while i < 64 {
-            if let Some(piece_data) = ChessBoard::INITIAL_MAILBOX[i] {
-                value ^= PIECE_HASH[i][cp_index(piece_data)];
-            }
-            i += 1;
-        }
-
-        //castle hash
-        i = 0;
-        while i < 4 {
-            value ^= CASTLE_HASH[i];
-            i += 1;
-        }
-
-        return ZorbistHash { value };
-    }
-
-    pub(super) const fn compute_hash(chessboard: &ChessBoard) -> ZorbistHash {
-        //side hash
-        let mut value = match chessboard.side_to_move {
-            crate::bitboard::Side::White => 0u64,
-            crate::bitboard::Side::Black => SIDE_HASH[0],
-        };
-
-        //piece hash
-        let mut i: usize = 0;
-        while i < 64 {
-            if let Some(piece_data) = chessboard.mailbox[i] {
-                value ^= PIECE_HASH[i][cp_index(piece_data)];
-            }
-            i += 1;
-        }
-
-        //castle hash
-        i = 0;
-        while i < 4 {
-            if chessboard.castle_bools[i] {
-                value ^= CASTLE_HASH[i]
-            }
-            i += 1;
-        }
-
-        //en-passant hash
-        let mut enpassant_bb = chessboard.enpassant_bb;
-        while enpassant_bb.is_not_zero() {
-            let square = enpassant_bb.lsb_square().unwrap();
-            value ^= ENPASSANT_FILE_HASH[COLS[square.to_index()]];
-            enpassant_bb = enpassant_bb.pop_bit(square);
-        }
-
-        return ZorbistHash { value };
-    }
-
-    pub(super) const fn compute_castle_hash(chessboard: &ChessBoard) -> ZorbistHash {
-        let mut value = 0u64;
-
-        let mut i: usize = 0;
-        while i < 4 {
-            if chessboard.castle_bools[i] {
-                value ^= CASTLE_HASH[i]
-            }
-            i += 1;
-        }
-        return ZorbistHash { value };
-    }
-
-    pub(super) const fn compute_enpassant_hash(enpassant_bb: BitBoard) -> ZorbistHash {
-        let mut value: u64 = 0;
-        let mut enpassant_bb = enpassant_bb;
-        while enpassant_bb.is_not_zero() {
-            let square = enpassant_bb.lsb_square().unwrap();
-            value ^= ENPASSANT_FILE_HASH[COLS[square.to_index()]];
-            enpassant_bb = enpassant_bb.pop_bit(square);
-        }
-        return zorbist::ZorbistHash { value };
-    }
-
-    const fn update_hash(&self, s: Square, t: Square, s_p: ChessPiece, t_p: Option<ChessPiece>) -> ZorbistHash {
-        let mut value = self.value;
-        value ^= PIECE_HASH[s.to_index()][cp_index(s_p)];
-        value ^= PIECE_HASH[t.to_index()][cp_index(s_p)];
-        value ^= match t_p {
-            Some(t_p) => PIECE_HASH[t.to_index()][cp_index(t_p)],
-            None => 0u64,
-        };
-        todo!()
-    }
-
-    pub(crate) const fn piece_hash(square: Square, chesspiece: ChessPiece) -> ZorbistHash {
-        ZorbistHash { value: PIECE_HASH[square.to_index()][cp_index(chesspiece)] }
-    }
-
-    pub(crate) const fn castle_hash(castling: Castling) -> ZorbistHash {
-        match castling {
-            Castling::KINGSIDE(Side::White) => ZorbistHash { value: CASTLE_HASH[0] },
-            Castling::QUEENSIDE(Side::White) => ZorbistHash { value: CASTLE_HASH[1] },
-            Castling::KINGSIDE(Side::Black) => ZorbistHash { value: CASTLE_HASH[2] },
-            Castling::QUEENSIDE(Side::Black) => ZorbistHash { value: CASTLE_HASH[3] },
-        }
-    }
-
-    pub(crate) const fn side_hash() -> ZorbistHash {
-        ZorbistHash { value: SIDE_HASH[0] }
-    }
-}
-
-impl BitAnd for ZorbistHash {
-    type Output = ZorbistHash;
-    fn bitand(self, rhs: ZorbistHash) -> Self::Output {
-        ZorbistHash { value: self.value & rhs.value }
-    }
-}
-
-impl BitAndAssign for ZorbistHash {
-    fn bitand_assign(&mut self, rhs: Self) {
-        self.value &= rhs.value;
-    }
-}
-
-impl BitOr for ZorbistHash {
-    type Output = ZorbistHash;
-    fn bitor(self, rhs: ZorbistHash) -> Self::Output {
-        ZorbistHash { value: self.value | rhs.value }
-    }
-}
-
-impl BitOrAssign for ZorbistHash {
-    fn bitor_assign(&mut self, rhs: Self) {
-        self.value |= rhs.value;
-    }
-}
-
-impl BitXor for ZorbistHash {
-    type Output = ZorbistHash;
-    fn bitxor(self, rhs: ZorbistHash) -> Self::Output {
-        ZorbistHash { value: self.value ^ rhs.value }
-    }
-}
-
-impl BitXorAssign for ZorbistHash {
-    fn bitxor_assign(&mut self, rhs: Self) {
-        self.value ^= rhs.value;
-    }
-}
-
-impl Not for ZorbistHash {
-    type Output = ZorbistHash;
-    fn not(self) -> Self::Output {
-        ZorbistHash { value: !self.value }
-    }
-}
-
 /* consts */
+
+//WK, WQ, BK, BQ
+#[rustfmt::skip]
+const CASTLE_HASH: [u64; 4] = [
+    0x6a1cf5e498eae033, 0x6aac61dc2cf2f40b, 0x743ca763de70e2d1, 0xf5052c6f0a2c1756
+];
+
+#[rustfmt::skip]
+const ENPASSANT_FILE_HASH: [u64; 8] = [
+    0x1dfbdce12e695571, 0x2a2aa72cc8a22849, 0xbe0d170a3ac7390b, 0xf20083dd53ab2a52,
+    0xec2ff44e3391fd9a, 0x31c9290c9edf4efc, 0x370a9bccafc439ca, 0xe8bc3bc62b419caa,
+];
+
+#[rustfmt::skip]
+const SIDE_HASH: [u64; 1] = [
+    0x708def0327105062
+];
 
 #[rustfmt::skip]
 const PIECE_HASH: [[u64; 12]; 64] = [
@@ -475,21 +275,4 @@ const PIECE_HASH: [[u64; 12]; 64] = [
         0x5735f47846e661cc, 0x40728daf79f5ea86, 0xa0d485335842d244, 0x3b0dc7ce618cb820, 0xe455a63c6fec2569, 0xc62e869e06215295,
         0xc8b741c69b0dbbc8, 0xc8fcce6f498394a5, 0xc0d448070dfc5aac, 0xd74bf08cb71b428b, 0x03c01b73faecc60b, 0x126c765f4a9ed32e,
     ],
-];
-
-//WK, WQ, BK, BQ
-#[rustfmt::skip]
-const CASTLE_HASH: [u64; 4] = [
-    0x6a1cf5e498eae033, 0x6aac61dc2cf2f40b, 0x743ca763de70e2d1, 0xf5052c6f0a2c1756
-];
-
-#[rustfmt::skip]
-const ENPASSANT_FILE_HASH: [u64; 8] = [
-    0x1dfbdce12e695571, 0x2a2aa72cc8a22849, 0xbe0d170a3ac7390b, 0xf20083dd53ab2a52,
-    0xec2ff44e3391fd9a, 0x31c9290c9edf4efc, 0x370a9bccafc439ca, 0xe8bc3bc62b419caa,
-];
-
-#[rustfmt::skip]
-const SIDE_HASH: [u64; 1] = [
-    0x708def0327105062
 ];

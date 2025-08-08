@@ -1,12 +1,13 @@
 use std::fmt::Display;
+pub use crate::bitboard::attack::*;
 use crate::square::Square;
 
 pub mod bit_ops;
-mod init;
-mod magic;
+pub mod attack;
 
-use crate::bitboard::init::*;
-use crate::bitboard::magic::*;
+
+
+/* last revised: 8/8/2025 */
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct BitBoard {
@@ -44,11 +45,8 @@ impl PieceType {
             [PieceType::Pawn, PieceType::Knight, PieceType::Bishop, PieceType::Rook, PieceType::Queen, PieceType::King];
         PIECETYPES.iter()
     }
-}
 
-
-impl PieceType {
-    pub(crate) fn to_uci_char(&self) -> char {
+    pub(crate) const fn to_uci_char(&self) -> char {
         match self {
             PieceType::Pawn => 'p',
             PieceType::Knight => 'n',
@@ -60,7 +58,7 @@ impl PieceType {
     }
 }
 
-pub(crate) type ChessPiece = (Side, PieceType);
+pub type ChessPiece = (Side, PieceType);
 
 impl Display for BitBoard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -77,6 +75,7 @@ impl Display for BitBoard {
 }
 
 impl BitBoard {
+    #[inline(always)]
     pub(crate) const fn new(data: u64) -> Self {
         Self { data }
     }
@@ -85,11 +84,12 @@ impl BitBoard {
     pub(crate) const ONES: BitBoard = BitBoard { data: u64::MAX };
 
     //creates a bitboard with a a non-zero bit in the n-th place
+    #[inline(always)]
     pub(crate) const fn nth(sq: Square) -> Self {
         Self { data: 1u64 << sq.to_index() }
     }
 
-
+    #[inline(always)]
     pub(crate) const fn nth_is_zero(&self, sq: Square) -> bool {
         match self.data & (1u64 << sq.to_index()) {
             0 => true,
@@ -97,6 +97,7 @@ impl BitBoard {
         }
     }
 
+    #[inline(always)]
     pub(crate) const fn nth_is_not_zero(&self, sq: Square) -> bool {
         match self.data & (1u64 << sq.to_index()) {
             0 => false,
@@ -104,39 +105,43 @@ impl BitBoard {
         }
     }
 
+    #[inline(always)]
     pub(crate) const fn is_zero(&self) -> bool {
         self.data == 0u64
     }
 
+    #[inline(always)]
     pub(crate) const fn is_not_zero(&self) -> bool {
         self.data != 0u64
     }
 
-    pub(crate)  fn set_bit(& self, square: Square) -> BitBoard {
-       BitBoard {data: self.data | 1u64 << square.to_index()}
+    #[inline(always)]
+    pub(crate) const fn set_bit(&mut self, square: Square) { 
+        self.data |= 1u64 << square.to_index();
     }
 
+    #[inline(always)]
     pub(crate) const fn get_bit(&self, i: usize) -> BitBoard {
         BitBoard {
             data: self.data & (1u64 << i),
         }
     }
 
-    pub(crate) const fn pop_bit(&self, square: Square) -> BitBoard {
-        BitBoard {
-            data: self.data & !(1u64 << square.to_index()),
-        }
+    #[inline(always)]
+    pub(crate) const fn pop_bit(&mut self, square: Square) {
+        self.data &=!(1u64 << square.to_index());
     }
 
-    pub(crate) const fn get_bit_data(&self, i: usize) -> u64 {
-        self.data & (1u64 << i)
-    }
-
-    pub(crate) const fn pop_bit_data(&self, i: usize) -> u64 {
-        self.data & !(1u64 << i)
-    }
+    //pub(crate) const fn get_bit_data(&self, i: usize) -> u64 {
+    //    self.data & (1u64 << i)
+    //}
+    //
+    //pub(crate) const fn pop_bit_data(&self, i: usize) -> u64 {
+    //    self.data & !(1u64 << i)
+    //}
 
     // index of least-significant-bit (lsb)
+    #[inline(always)]
     pub(crate) const fn lsb_index(&self) -> Option<usize> {
         if self.data == 0u64 {
             return None;
@@ -146,6 +151,7 @@ impl BitBoard {
     }
 
     // square of least-significant-bit (lsb)
+    #[inline(always)]
     pub(crate) const fn lsb_square(&self) -> Option<Square> {
         if self.data == 0u64 {
             return None;
@@ -154,37 +160,38 @@ impl BitBoard {
         }
     }
 
+    #[inline(always)]
     pub(crate) const fn count_ones(&self) -> u32 {
         self.data.count_ones()
     }
 
+    #[inline(always)]
     pub(crate) const fn bit_and(&self, other: &BitBoard) -> BitBoard {
         BitBoard {
             data: self.data & other.data,
         }
     }
 
+    #[inline(always)]
     pub(crate) const fn bit_or(&self, other: &BitBoard) -> BitBoard {
         BitBoard {
             data: self.data | other.data,
         }
     }
 
+    #[inline(always)]
     pub(crate) const fn bit_xor(&self, other: &BitBoard) -> BitBoard {
         BitBoard {
             data: self.data ^ other.data,
         }
     }
 
+    #[inline(always)]
     pub(crate) const fn bit_not(&self) -> BitBoard {
         BitBoard { data: !self.data }
     }
 }
 
-const W_PAWN_ATTACKS: [BitBoard; 64] = init_pawn_attack(Side::White);
-const B_PAWN_ATTACKS: [BitBoard; 64] = init_pawn_attack(Side::Black);
-const KNIGHT_ATTACKS: [BitBoard; 64] = init_knight_attack();
-const KING_ATTACKS: [BitBoard; 64] = init_king_attack();
 
 pub(crate) const RAYS: [[BitBoard; 64]; 64] = rays();
 
@@ -225,66 +232,28 @@ pub(crate) const B_KING_SIDE_CASTLE_MASK: BitBoard =
 pub(crate) const B_QUEEN_SIDE_CASTLE_MASK: BitBoard =
     BitBoard::new(0b00110000_00000000_00000000_00000000_00000000_00000000_00000000_00000000);
 
-pub const fn get_pawn_attack(square: Square, side: Side) -> BitBoard {
-    match side {
-        Side::White => W_PAWN_ATTACKS[square.to_index()],
-        Side::Black => B_PAWN_ATTACKS[square.to_index()],
-    }
-}
-
-pub const fn get_w_pawn_attack(square: Square) -> BitBoard {
-    W_PAWN_ATTACKS[square.to_index()]
-}
-
-pub const fn get_b_pawn_attack(square: Square) -> BitBoard {
-    B_PAWN_ATTACKS[square.to_index()]
-}
-
-pub const fn get_knight_attack(square: Square) -> BitBoard {
-    KNIGHT_ATTACKS[square.to_index()]
-}
-
-pub const fn get_king_attack(square: Square) -> BitBoard {
-    KING_ATTACKS[square.to_index()]
-}
-
-pub const fn get_bishop_attack(square: Square, blockers: BitBoard) -> BitBoard {
-    let m = magic_index(
-        BISHOP_MAGICS[square.to_index()],
-        blockers.bit_and(&BISHOP_MBB_MASK[square.to_index()]),
-        BISHOP_OCC_BITCOUNT[square.to_index()],
-    );
-    return BISHOP_ATTACKS_MBB[square.to_index()][m];
-}
-
-pub const fn get_rook_attack(square: Square, blockers: BitBoard) -> BitBoard {
-    let m = magic_index(
-        ROOK_MAGICS[square.to_index()],
-        blockers.bit_and(&ROOK_MBB_MASK[square.to_index()]),
-        ROOK_OCC_BITCOUNT[square.to_index()],
-    );
-    return ROOK_ATTACKS_MBB[square.to_index()][m];
-}
-
-pub const fn get_queen_attack(square: Square, blockers: BitBoard) -> BitBoard {
-    BitBoard {
-        data: get_bishop_attack(square, blockers).data | get_rook_attack(square, blockers).data,
-    }
-}
-
-pub const fn is_same_diag(source: Square, target: Square) -> bool {
+#[inline(always)]
+pub(crate) const fn is_same_diag(source: Square, target: Square) -> bool {
    (DDIAG[source.to_index()] == DDIAG[target.to_index()]) || (ADIAG[source.to_index()] == ADIAG[target.to_index()])
 }
-pub const fn is_same_adiag(source: Square, target: Square) -> bool {
+
+#[inline(always)]
+pub(crate) const fn is_same_adiag(source: Square, target: Square) -> bool {
     ADIAG[source.to_index()] == ADIAG[target.to_index()]
 }
-pub const fn is_same_ddiag(source: Square, target: Square) -> bool {
+
+#[inline(always)]
+pub(crate) const fn is_same_ddiag(source: Square, target: Square) -> bool {
     DDIAG[source.to_index()] == DDIAG[target.to_index()]
 }
-pub const fn is_same_col(source: Square, target: Square) -> bool {
+
+#[inline(always)]
+pub(crate) const fn is_same_col(source: Square, target: Square) -> bool {
    COLS[source.to_index()] == COLS[target.to_index()]
 }
-pub const fn is_same_row(source: Square, target: Square) -> bool {
+
+#[inline(always)]
+pub(crate) const fn is_same_row(source: Square, target: Square) -> bool {
    ROWS[source.to_index()] == ROWS[target.to_index()]
 }
 /* ==== labels ==== */

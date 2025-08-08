@@ -46,27 +46,27 @@ fn calculate_attacks(cb: &ChessBoard, s: Square, p: PieceType) -> Vec<ChessMove>
         };
 
         if piece_type == PieceType::King && cb.is_square_attacked(target, side.update(), blockers) {
-            targets = targets.pop_bit(target);
+            targets.pop_bit(target);
             continue;
         };
 
         //only consider moves along pinning ray if pinned
         let pin_mask = cb.pin_mask(source);
         if pin_mask.is_not_zero() && pin_mask.nth_is_zero(target) {
-            targets = targets.pop_bit(target);
+            targets.pop_bit(target);
             continue;
         }
 
         //checked logic
         //only consider moves along checking ray if in check, unless piece is your king
         if check_mask.is_not_zero() && check_mask.nth_is_zero(target) && piece_type != PieceType::King {
-            targets = targets.pop_bit(target);
+            targets.pop_bit(target);
             continue;
         }
 
         //append moves
         moves.push(ChessMove::new(source, target, MoveType::Normal));
-        targets = targets.pop_bit(target);
+        targets.pop_bit(target);
     }
     return moves;
 }
@@ -120,7 +120,7 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
                         chessboard.mailbox[square.to_index()].unwrap(),
                         (_, PieceType::Rook) | (_, PieceType::Queen)
                     ));
-            pinners = pinners.pop_bit(square);
+            pinners.pop_bit(square);
         }
     }
 
@@ -205,7 +205,7 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
                     }
                 }
             }
-            attacks = attacks.pop_bit(attack);
+            attacks.pop_bit(attack);
         }
     }
 
@@ -288,22 +288,22 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
                     Side::Black => cpt_index!(p),
                 };
 
-                test_cb.piece_bbs[i] = test_cb.piece_bbs[i].pop_bit(source); //remove from source square
-                test_cb.piece_bbs[i] = test_cb.piece_bbs[i].set_bit(attack); //add to attack square
-                test_cb.piece_bbs[enemy_pawn_index] = test_cb.piece_bbs[enemy_pawn_index].pop_bit(enemy_pawn_square);
+                test_cb.piece_bbs[i].pop_bit(source); //remove from source square
+                test_cb.piece_bbs[i].set_bit(attack); //add to attack square
+                test_cb.piece_bbs[enemy_pawn_index].pop_bit(enemy_pawn_square);
                 if test_cb.is_king_in_check(side) {
                     //if s.to_index() == 26 {
                     //    println!("inner inner loop!!!");
                     //    println!("test_cb:\n{}", test_cb);
                     //}
-                    attacks = attacks.pop_bit(attack);
+                    attacks.pop_bit(attack);
                     continue;
                 }
 
                 //if there are no checks
                 if chessboard.check_bb.is_zero() {
                     moves.push(ChessMove::new(source, attack, MoveType::EnPassant));
-                    attacks = attacks.pop_bit(attack);
+                    attacks.pop_bit(attack);
                     continue;
                 }
 
@@ -312,13 +312,13 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
                     let checker_square = chessboard.check_bb.lsb_square().unwrap();
                     if checker_square == enemy_pawn_square {
                         moves.push(ChessMove::new(source, attack, MoveType::EnPassant));
-                        attacks = attacks.pop_bit(attack);
+                        attacks.pop_bit(attack);
                         continue;
                     }
                 }
             }
             moves.push(ChessMove::new(source, attack, MoveType::EnPassant));
-            attacks = attacks.pop_bit(attack);
+            attacks.pop_bit(attack);
         }
     }
     return moves;
@@ -406,7 +406,7 @@ impl ChessBoard {
                                 && (COLS[source.to_index()] != 0))
                     {
                         let enpassant_square = Square::new(target.to_u8() - 8);
-                        enpassant_bb = enpassant_bb.set_bit(enpassant_square);
+                        enpassant_bb.set_bit(enpassant_square);
                     }
                 }
             }
@@ -426,7 +426,7 @@ impl ChessBoard {
                                 && (COLS[source.to_index()] != 0))
                     {
                         let enpassant_square = Square::new(target.to_u8() + 8);
-                        enpassant_bb = enpassant_bb.set_bit(enpassant_square);
+                        enpassant_bb.set_bit(enpassant_square);
                     }
                 }
             }
@@ -434,8 +434,8 @@ impl ChessBoard {
         }
 
         //move the piece
-        self.piece_bbs[source_index] = self.piece_bbs[source_index].pop_bit(source);
-        self.piece_bbs[source_index] = self.piece_bbs[source_index].set_bit(target);
+        self.piece_bbs[source_index].pop_bit(source);
+        self.piece_bbs[source_index].set_bit(target);
         current_hash ^= ZorbistHash::piece_hash(source, source_piece);
         current_hash ^= ZorbistHash::piece_hash(target, source_piece);
         self.mailbox[source.to_index()] = None;
@@ -447,7 +447,7 @@ impl ChessBoard {
                 //dealing with captures
                 if let Some(target_piece) = target_piece {
                     let target_index = cp_index(target_piece);
-                    self.piece_bbs[target_index] = self.piece_bbs[target_index].pop_bit(target);
+                    self.piece_bbs[target_index].pop_bit(target);
                     current_hash ^= ZorbistHash::piece_hash(target, target_piece);
 
                     //reset 50-move rule
@@ -498,8 +498,8 @@ impl ChessBoard {
                     Castling::KINGSIDE(Side::White) => {
                         // check if rook is present
                         assert!(self.piece_bbs[04].nth_is_not_zero(white_kingside_rook_sq_source));
-                        self.piece_bbs[04] = self.piece_bbs[04].pop_bit(white_kingside_rook_sq_source);
-                        self.piece_bbs[04] = self.piece_bbs[04].bit_or(&BitBoard::nth(white_kingside_rook_sq_target));
+                        self.piece_bbs[04].pop_bit(white_kingside_rook_sq_source);
+                        self.piece_bbs[04].set_bit(white_kingside_rook_sq_target);
                         self.mailbox[white_kingside_rook_sq_source.to_index()] = None;
                         self.mailbox[white_kingside_rook_sq_target.to_index()] = opt_cpt!(R);
 
@@ -511,8 +511,8 @@ impl ChessBoard {
                     Castling::QUEENSIDE(Side::White) => {
                         // check if rook is present
                         assert!(self.piece_bbs[04].nth_is_not_zero(white_queenside_rook_sq_source));
-                        self.piece_bbs[04] = self.piece_bbs[04].pop_bit(white_queenside_rook_sq_source);
-                        self.piece_bbs[04] = self.piece_bbs[04].bit_or(&BitBoard::nth(white_queenside_rook_sq_target));
+                        self.piece_bbs[04].pop_bit(white_queenside_rook_sq_source);
+                        self.piece_bbs[04].set_bit(white_queenside_rook_sq_target);
                         self.mailbox[white_queenside_rook_sq_source.to_index()] = None;
                         self.mailbox[white_queenside_rook_sq_target.to_index()] = opt_cpt!(R);
 
@@ -524,8 +524,8 @@ impl ChessBoard {
                     Castling::KINGSIDE(Side::Black) => {
                         // check if rook is present
                         assert!(self.piece_bbs[10].nth_is_not_zero(black_kingside_rook_sq_source));
-                        self.piece_bbs[10] = self.piece_bbs[10].pop_bit(black_kingside_rook_sq_source);
-                        self.piece_bbs[10] = self.piece_bbs[10].bit_or(&BitBoard::nth(black_kingside_rook_sq_target));
+                        self.piece_bbs[10].pop_bit(black_kingside_rook_sq_source);
+                        self.piece_bbs[10].set_bit(black_kingside_rook_sq_target);
                         self.mailbox[black_kingside_rook_sq_source.to_index()] = None;
                         self.mailbox[black_kingside_rook_sq_target.to_index()] = opt_cpt!(r);
 
@@ -537,8 +537,8 @@ impl ChessBoard {
                     Castling::QUEENSIDE(Side::Black) => {
                         // check if rook is present
                         assert!(self.piece_bbs[10].nth_is_not_zero(black_queenside_rook_sq_source));
-                        self.piece_bbs[10] = self.piece_bbs[10].pop_bit(black_queenside_rook_sq_source);
-                        self.piece_bbs[10] = self.piece_bbs[10].bit_or(&BitBoard::nth(black_queenside_rook_sq_target));
+                        self.piece_bbs[10].pop_bit(black_queenside_rook_sq_source);
+                        self.piece_bbs[10].set_bit(black_queenside_rook_sq_target);
                         self.mailbox[black_queenside_rook_sq_source.to_index()] = None;
                         self.mailbox[black_queenside_rook_sq_target.to_index()] = opt_cpt!(r);
 
@@ -572,7 +572,7 @@ impl ChessBoard {
                         || self.mailbox[enemy_pawn_square.to_index()] == opt_cpt!(P)
                 );
 
-                self.piece_bbs[enemy_pawn_index] = self.piece_bbs[enemy_pawn_index].pop_bit(enemy_pawn_square);
+                self.piece_bbs[enemy_pawn_index].pop_bit(enemy_pawn_square);
                 current_hash ^= ZorbistHash::piece_hash(enemy_pawn_square, enemy_piece);
                 self.mailbox[enemy_pawn_square.to_index()] = None;
             }
@@ -584,7 +584,7 @@ impl ChessBoard {
                 //dealing with captures
                 if let Some(target_piece) = target_piece {
                     let target_index = cp_index(target_piece);
-                    self.piece_bbs[target_index] = self.piece_bbs[target_index].pop_bit(target);
+                    self.piece_bbs[target_index].pop_bit(target);
                     current_hash ^= ZorbistHash::piece_hash(target, target_piece);
 
                     //reset 50-move rule
@@ -622,11 +622,11 @@ impl ChessBoard {
                 }
 
                 //remove the pawn piece
-                self.piece_bbs[source_index] = self.piece_bbs[source_index].pop_bit(target);
+                self.piece_bbs[source_index].pop_bit(target);
                 current_hash ^= ZorbistHash::piece_hash(target, source_piece);
 
                 //add the promoted piece
-                self.piece_bbs[promoted_index] = self.piece_bbs[promoted_index].bit_or(&BitBoard::nth(target));
+                self.piece_bbs[promoted_index].set_bit(target);
                 current_hash ^= ZorbistHash::piece_hash(target, promoted_piece);
                 self.mailbox[target.to_index()] = Some(promoted_piece);
             }
@@ -701,7 +701,7 @@ impl ChessBoard {
                         // pinned knights can not move
 
                         if pinned_pieces.nth_is_not_zero(source) {
-                            sources = sources.pop_bit(source);
+                            sources.pop_bit(source);
                             continue;
                         }
 
@@ -712,7 +712,7 @@ impl ChessBoard {
 
                     _ => moves.append(&mut calculate_attacks(self, source, piece_type)),
                 }
-                sources = sources.pop_bit(source);
+                sources.pop_bit(source);
             }
         }
         return moves;
@@ -802,7 +802,7 @@ impl ChessBoard {
                 pinner_bb = pinner_bb.bit_or(&BitBoard::nth(possible_pinner));
                 pinned_bb = pinned_bb.bit_or(&possible_pinned);
             }
-            possible_pinners = possible_pinners.pop_bit(possible_pinner);
+            possible_pinners.pop_bit(possible_pinner);
         }
         self.pinned_bb = pinned_bb;
         self.pinner_bb = pinner_bb;
@@ -821,7 +821,7 @@ impl ChessBoard {
                     check_mask = check_mask.bit_or(&RAYS[checker_square.to_index()][self.king_square().to_index()]);
                 }
             }
-            check_bb = check_bb.pop_bit(checker_square);
+            check_bb.pop_bit(checker_square);
         }
         self.check_mask = check_mask;
     }

@@ -20,7 +20,6 @@ pub struct ChessBoard {
     mailbox: [Option<ChessPiece>; 64],
     castle_bools: [bool; 4],
     enpassant_bb: BitBoard, //pieces triggering en-passant rule
-    //attacked_bb: BitBoard, //a mask showing all attacked squares (do I need this?)
     check_bb: BitBoard, //pieces triggering check condition
     check_mask: BitBoard, //all the squares attacked by checking pieces;
     pinned_bb: BitBoard, //pieces that are pinned
@@ -43,7 +42,7 @@ impl Display for ChessBoard {
         let mut s = String::new();
 
         // get empty_squares
-        let mut empty_squares = BitBoard::ZERO;
+        let mut empty_squares: BitBoard = BitBoard::ZERO;
         for piece_bb in self.piece_bbs {
             empty_squares = piece_bb | empty_squares;
         }
@@ -113,7 +112,7 @@ impl ChessBoard {
             //println!("c:{}", c);
             match c {
                 'K' |'Q' |'N' |'B' |'R' |'P' |'k' |'q' |'n' |'b' |'r' |'p' => {
-                    chessboard.piece_bbs[sym_index(c)] = chessboard.piece_bbs[sym_index(c)].set_bit(Square::new(square as u8));
+                    chessboard.piece_bbs[sym_index(c)].set_bit(Square::new(square as u8));
                     chessboard.mailbox[square] = match c {
                         'K' => Some((Side::White, PieceType::King)),
                         'Q' => Some((Side::White, PieceType::Queen)),
@@ -434,7 +433,7 @@ impl ChessBoard {
             if self.is_square_attacked(square, side.update(), self.blockers()) {
                 return false;
             }
-            squares = squares.pop_bit(square);
+            squares.pop_bit(square);
         }
         return true;
     }
@@ -492,7 +491,7 @@ impl ChessBoard {
             if self.is_square_attacked(square, side.update(), self.blockers()) {
                 return false;
             }
-            squares = squares.pop_bit(square);
+            squares.pop_bit(square);
         }
         return true;
     }
@@ -511,7 +510,7 @@ impl ChessBoard {
             if RAYS[self.king_square().to_index()][pinner.to_index()].nth_is_not_zero(square) {
                 pin_mask = pin_mask.bit_or(&RAYS[self.king_square().to_index()][pinner.to_index()].bit_or(&BitBoard::nth(pinner)))
             }
-            pinners = pinners.pop_bit(pinner);
+            pinners.pop_bit(pinner);
         }
         return pin_mask;
     } 

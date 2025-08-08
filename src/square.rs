@@ -14,29 +14,38 @@ impl Default for Square {
 impl Square {
     pub const MIN: u8 = 0;
     pub const MAX: u8 = 63;
+
+    #[inline(always)]
     pub const fn new(data: u8) -> Square {
         Square { data: data & Square::MAX }
     }
 
+    #[inline(always)]
     pub const fn to_u8(&self) -> u8 {
         self.data
     }
 
+    #[inline(always)]
     pub const fn to_index(&self) -> usize {
         self.data as usize
     }
 
-    pub fn iterator() -> std::slice::Iter<'static, Square> {
-        SQUARES.iter()
-    }
+    //pub fn up(&self) -> Option<Square> {
+    //    if
+    //    self.data +8
+    //}
 
-    pub(crate) const fn squares_array_usize() -> [usize; 64] {
-        SQUARES_RAW_USIZE
-    }
+    //pub fn iterator() -> std::slice::Iter<'static, Square> {
+    //    SQUARES.iter()
+    //}
 
-    pub(crate) const fn squares_array() -> [Square; 64] {
-        SQUARES
-    }
+    //pub(crate) const fn squares_array_usize() -> [usize; 64] {
+    //    SQUARES_RAW_USIZE
+    //}
+
+    //pub(crate) const fn squares_array() -> [Square; 64] {
+    //    SQUARES
+    //}
 
     /* convenient const for castling */
     pub(crate) const W_KING_SQUARE: Square = Square { data: 03 };
