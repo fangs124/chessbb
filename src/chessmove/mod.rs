@@ -46,17 +46,20 @@ note: castling move are encoded as follows
 
 //API traits: Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Display, Default
 
+//FIXME need to change visibility here... its only pub for debug
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ChessMove {
     pub data: u16,
 }
 
+//needed to sort chess moves
 impl Ord for ChessMove {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.print_move().cmp(&other.print_move())
     }
 }
 
+//needed to sort chess moves
 impl PartialOrd for ChessMove {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.print_move().partial_cmp(&other.print_move())
@@ -93,11 +96,12 @@ pub(crate) enum Castling {
 }
 
 impl ChessMove {
-    /* get functions */
+    #[inline(always)]
     pub(crate) const fn source(&self) -> Square {
         Square::new(((self.data & 0b000000_111111u16) >> 0) as u8)
     }
 
+    #[inline(always)]
     pub(crate) const fn target(&self) -> Square {
         Square::new(((self.data & 0b111111_000000u16) >> 6) as u8)
     }
@@ -128,16 +132,17 @@ impl ChessMove {
         }
     }
 
-    /* set functions */
+    #[inline(always)]
     pub(crate) const fn set_source(&mut self, index: usize) {
         self.data &= ((index << 0) & 0b111111) as u16;
     }
 
+    #[inline(always)]
     pub(crate) const fn set_target(&mut self, index: usize) {
         self.data &= ((index << 6) & 0b111111_000000) as u16;
     }
 
-    pub const fn new(s: Square, t: Square, m: MoveType) -> Self {
+    pub(crate) const fn new(s: Square, t: Square, m: MoveType) -> Self {
         // can't promote to king/pawn
         // ps: !matches!(...) is ugly
         assert!(matches!(m, MoveType::Promotion(PieceType::King)) == false);

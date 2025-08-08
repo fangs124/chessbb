@@ -7,6 +7,19 @@ extern crate chessbb;
 fn main() {
     unsafe { env::set_var("RUST_BACKTRACE", "full") };
     /* from starting pos */
+
+    let start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    //
+    let datas = [];
+    let moves = datas.map(|x| ChessMove { data: x });
+    let mut chessboard = ChessBoard::from_fen(start_fen);
+    for chessmove in moves {
+        chessboard.update_state(chessmove);
+    }
+    let mut moves = chessboard.generate_moves();
+    moves.sort();
+
+    //old test
     /*
     let mut chessboard = ChessBoard::start_pos();
     let move1 = ChessMove { data: 1487 }; //a2a3
@@ -95,16 +108,16 @@ fn main() {
     //moves.sort();
 
     /* position 6 */
-    let start_fen = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10";
-    //
-    let datas = [];
-    let moves = datas.map(|x| ChessMove { data: x });
-    let mut chessboard = ChessBoard::from_fen(start_fen);
-    for chessmove in moves {
-        chessboard.update_state(chessmove);
-    }
-    let mut moves = chessboard.generate_moves();
-    moves.sort();
+    //let start_fen = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10";
+    ////
+    //let datas = [];
+    //let moves = datas.map(|x| ChessMove { data: x });
+    //let mut chessboard = ChessBoard::from_fen(start_fen);
+    //for chessmove in moves {
+    //    chessboard.update_state(chessmove);
+    //}
+    //let mut moves = chessboard.generate_moves();
+    //moves.sort();
 
     /* error msg here */
 
@@ -127,7 +140,7 @@ fn main() {
     for result_str in result_str_vec {
         println!("{}", result_str);
     }
-    println!("");
+    println!();
     println!("========================");
     //println!("white rook:\n{}", chessboard.piece_bb(cpt!(R)));
     //println!("black rook:\n{}", chessboard.piece_bb(cpt!(r)));
