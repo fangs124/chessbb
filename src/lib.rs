@@ -10,7 +10,7 @@ use crate::{bitboard::*, square::Square, zorbist::{ZorbistHash, ZorbistTable}};
 use crate::perft::*;
 
 /* re-export */
-pub use crate::chessmove::ChessMove;
+pub use crate::chessmove::ChessMove; //FIXME
 pub use crate::bitboard::{Side, PieceType};
 
 /* ChessBoard encodes the board-state of the game */
@@ -72,6 +72,7 @@ impl Display for ChessBoard {
 }
 
 impl ChessBoard {
+    #[allow(clippy::implicit_return)]
     pub const fn start_pos() -> Self {
         Self {
             piece_bbs: ChessBoard::INITIAL_CHESS_POS,
@@ -527,6 +528,7 @@ impl ChessBoard {
         }
     }
 
+    #[allow(clippy::implicit_return)]
     pub const fn piece_bb(&self, piece_type: ChessPiece) -> BitBoard {
         match piece_type {
             (Side::White, PieceType::King  ) => self.piece_bbs[00],

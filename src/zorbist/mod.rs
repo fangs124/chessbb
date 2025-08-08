@@ -176,12 +176,15 @@ impl ZorbistHash {
 
 impl BitAnd for ZorbistHash {
     type Output = ZorbistHash;
+
+    #[inline(always)]
     fn bitand(self, rhs: ZorbistHash) -> Self::Output {
         ZorbistHash { value: self.value & rhs.value }
     }
 }
 
 impl BitAndAssign for ZorbistHash {
+    #[inline(always)]
     fn bitand_assign(&mut self, rhs: Self) {
         self.value &= rhs.value;
     }
@@ -189,12 +192,14 @@ impl BitAndAssign for ZorbistHash {
 
 impl BitOr for ZorbistHash {
     type Output = ZorbistHash;
+    #[inline(always)]
     fn bitor(self, rhs: ZorbistHash) -> Self::Output {
         ZorbistHash { value: self.value | rhs.value }
     }
 }
 
 impl BitOrAssign for ZorbistHash {
+    #[inline(always)]
     fn bitor_assign(&mut self, rhs: Self) {
         self.value |= rhs.value;
     }
@@ -202,12 +207,15 @@ impl BitOrAssign for ZorbistHash {
 
 impl BitXor for ZorbistHash {
     type Output = ZorbistHash;
+
+    #[inline(always)]
     fn bitxor(self, rhs: ZorbistHash) -> Self::Output {
         ZorbistHash { value: self.value ^ rhs.value }
     }
 }
 
 impl BitXorAssign for ZorbistHash {
+    #[inline(always)]
     fn bitxor_assign(&mut self, rhs: Self) {
         self.value ^= rhs.value;
     }
@@ -215,6 +223,7 @@ impl BitXorAssign for ZorbistHash {
 
 impl Not for ZorbistHash {
     type Output = ZorbistHash;
+    #[inline(always)]
     fn not(self) -> Self::Output {
         ZorbistHash { value: !self.value }
     }
