@@ -107,19 +107,19 @@ const fn bishop_mbb_mask() -> [BitBoard; 64] {
         while j < 7 {
             //    up left direction: (+,+)
             if i_rank + j < 7 && i_file + j < 7 {
-                data |= 1u64 << (i_rank + j) * 8 + (i_file + j);
+                data |= 1u64 << ((i_rank + j) * 8 + (i_file + j));
             }
             //  down left direction: (-,+)
             if 0 < i_rank - j && i_file + j < 7 {
-                data |= 1u64 << (i_rank - j) * 8 + (i_file + j);
+                data |= 1u64 << ((i_rank - j) * 8 + (i_file + j));
             }
             //    up right direction: (+,-)
             if i_rank + j < 7 && 0 < i_file - j {
-                data |= 1u64 << (i_rank + j) * 8 + (i_file - j);
+                data |= 1u64 << ((i_rank + j) * 8 + (i_file - j));
             }
             //    up right direction: (-,-)
             if 0 < i_rank - j && 0 < i_file - j {
-                data |= 1u64 << (i_rank - j) * 8 + (i_file - j);
+                data |= 1u64 << ((i_rank - j) * 8 + (i_file - j));
             }
             j += 1
         }
@@ -142,19 +142,19 @@ const fn rook_mbb_mask() -> [BitBoard; 64] {
         while j < 7 {
             // right direction: (file - j, rank)
             if 0 < i_file - j {
-                data |= 1u64 << (i_rank * 8) + (i_file - j);
+                data |= 1u64 << ((i_rank * 8) + (i_file - j));
             }
             // left direction: (file + j, rank)
             if i_file + j < 7 {
-                data |= 1u64 << (i_rank * 8) + (i_file + j);
+                data |= 1u64 << ((i_rank * 8) + (i_file + j));
             }
             //   up direction: (file, rank + j)
             if i_rank + j < 7 {
-                data |= 1u64 << ((i_rank + j) * 8) + i_file;
+                data |= 1u64 << (((i_rank + j) * 8) + i_file);
             }
             // down direction: (file, rank - j)
             if 0 < i_rank - j {
-                data |= 1u64 << ((i_rank - j) * 8) + i_file;
+                data |= 1u64 << (((i_rank - j) * 8) + i_file);
             }
             j += 1
         }

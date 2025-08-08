@@ -66,11 +66,11 @@ impl Display for BitBoard {
         for i in 0..8u64 {
             s.push_str(&format!(
                 "{:08b}",
-                (self.data & (0xFFu64 << 8 * (7 - i))) >> 8 * (7 - i)
+                (self.data & (0xFFu64 << (8 * (7 - i)))) >> (8 * (7 - i))
             ));
             s.push('\n');
         }
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 

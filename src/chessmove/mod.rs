@@ -97,7 +97,7 @@ pub(crate) enum Castling {
 impl ChessMove {
     #[inline(always)]
     pub(crate) const fn source(&self) -> Square {
-        Square::new(((self.data & 0b000000_111111u16) >> 0) as u8)
+        Square::new(((self.data & 0b000000_111111u16)) as u8)
     }
 
     #[inline(always)]

@@ -142,7 +142,7 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
             //FIXME assumption checkers_count == 1
             // can only move one-square if not in check, or blocks check
             if check_mask.is_zero() || check_mask.nth_is_not_zero(target) {
-                match (ROWS[target.to_usize()] == promotion_row) {
+                match ROWS[target.to_usize()] == promotion_row {
                     true => moves.append(&mut ChessMove::promotions(source, target).to_vec()),
                     false => moves.push(ChessMove::new(source, target, MoveType::Normal)),
                 }
@@ -202,7 +202,7 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
                 //}
                 //can only attack a square if not pinned or capturing piece pinning the pawn
                 if pin_mask.is_zero() || is_attack_pinner {
-                    match (ROWS[attack.to_usize()] == promotion_row) {
+                    match ROWS[attack.to_usize()] == promotion_row {
                         true => moves.append(&mut ChessMove::promotions(source, attack).to_vec()),
                         false => moves.push(ChessMove::new(source, attack, MoveType::Normal)),
                     }
@@ -270,10 +270,10 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
             //}
 
             //if enemy rook and friendly king is in the same row, check for special case
-            if ((chessboard.piece_bbs[enemy_rook_index].bit_or(&chessboard.piece_bbs[king_index]))
+            if (chessboard.piece_bbs[enemy_rook_index].bit_or(&chessboard.piece_bbs[king_index]))
                 .bit_and(&king_row_bb)
                 .count_ones()
-                >= 2)
+                >= 2
             {
                 //if s.to_index() == 26 {
                 //    println!("inner loop!!!");

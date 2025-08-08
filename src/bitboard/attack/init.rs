@@ -140,9 +140,9 @@ pub(super) const fn naive_bishop_attack(i: usize, blockers: BitBoard) -> BitBoar
         //    up left direction: (+,+)
         if i_rank + j <= 7 && i_file + j <= 7 {
             if !ul_is_blocked {
-                data |= 1u64 << (i_rank + j) * 8 + (i_file + j);
+                data |= 1u64 << ((i_rank + j) * 8 + (i_file + j));
                 if i_rank + j < 7 && i_file + j < 7 {
-                    if 1u64 << (i_rank + j) * 8 + (i_file + j) & blockers.data != BitBoard::ZERO.data {
+                    if 1u64 << ((i_rank + j) * 8 + (i_file + j)) & blockers.data != BitBoard::ZERO.data {
                         ul_is_blocked = true;
                     }
                 }
@@ -152,9 +152,9 @@ pub(super) const fn naive_bishop_attack(i: usize, blockers: BitBoard) -> BitBoar
         //  down left direction: (-,+)
         if 0 <= i_rank - j && i_file + j <= 7 {
             if !dl_is_blocked {
-                data |= 1u64 << (i_rank - j) * 8 + (i_file + j);
+                data |= 1u64 << ((i_rank - j) * 8 + (i_file + j));
                 if 0 < i_rank - j && i_file + j < 7 {
-                    if 1u64 << (i_rank - j) * 8 + (i_file + j) & blockers.data != BitBoard::ZERO.data {
+                    if 1u64 << ((i_rank - j) * 8 + (i_file + j)) & blockers.data != BitBoard::ZERO.data {
                         dl_is_blocked = true;
                     }
                 }
@@ -164,9 +164,9 @@ pub(super) const fn naive_bishop_attack(i: usize, blockers: BitBoard) -> BitBoar
         //    up right direction: (+,-)
         if i_rank + j <= 7 && 0 <= i_file - j {
             if !ur_is_blocked {
-                data |= 1u64 << (i_rank + j) * 8 + (i_file - j);
+                data |= 1u64 << ((i_rank + j) * 8 + (i_file - j));
                 if i_rank + j < 7 && 0 < i_file - j {
-                    if 1u64 << (i_rank + j) * 8 + (i_file - j) & blockers.data != BitBoard::ZERO.data {
+                    if 1u64 << ((i_rank + j) * 8 + (i_file - j)) & blockers.data != BitBoard::ZERO.data {
                         ur_is_blocked = true;
                     }
                 }
@@ -176,9 +176,9 @@ pub(super) const fn naive_bishop_attack(i: usize, blockers: BitBoard) -> BitBoar
         //  down right direction: (-,-)
         if 0 <= i_rank - j && 0 <= i_file - j {
             if !dr_is_blocked {
-                data |= 1u64 << (i_rank - j) * 8 + (i_file - j);
+                data |= 1u64 << ((i_rank - j) * 8 + (i_file - j));
                 if 0 < i_rank - j && 0 < i_file - j {
-                    if 1u64 << (i_rank - j) * 8 + (i_file - j) & blockers.data != BitBoard::ZERO.data {
+                    if 1u64 << ((i_rank - j) * 8 + (i_file - j)) & blockers.data != BitBoard::ZERO.data {
                         dr_is_blocked = true;
                     }
                 }
@@ -205,9 +205,9 @@ pub(super) const fn naive_rook_attack(i: usize, blockers: BitBoard) -> BitBoard 
         // right direction: (file - j, rank)
         if 0 <= i_file - j {
             if !r_is_blocked {
-                data |= 1u64 << (i_rank * 8) + (i_file - j);
+                data |= 1u64 << ((i_rank * 8) + (i_file - j));
                 if 0 < i_file - j {
-                    if 1u64 << (i_rank * 8) + (i_file - j) & blockers.data != BitBoard::ZERO.data {
+                    if 1u64 << ((i_rank * 8) + (i_file - j)) & blockers.data != BitBoard::ZERO.data {
                         r_is_blocked = true;
                     }
                 }
@@ -216,9 +216,9 @@ pub(super) const fn naive_rook_attack(i: usize, blockers: BitBoard) -> BitBoard 
         // left direction: (file + j, rank)
         if i_file + j <= 7 {
             if !l_is_blocked {
-                data |= 1u64 << (i_rank * 8) + (i_file + j);
+                data |= 1u64 << ((i_rank * 8) + (i_file + j));
                 if i_file + j < 7 {
-                    if 1u64 << (i_rank * 8) + (i_file + j) & blockers.data != BitBoard::ZERO.data {
+                    if 1u64 << ((i_rank * 8) + (i_file + j)) & blockers.data != BitBoard::ZERO.data {
                         l_is_blocked = true;
                     }
                 }
@@ -227,9 +227,9 @@ pub(super) const fn naive_rook_attack(i: usize, blockers: BitBoard) -> BitBoard 
         //   up direction: (file, rank + j)
         if i_rank + j <= 7 {
             if !u_is_blocked {
-                data |= 1u64 << ((i_rank + j) * 8) + i_file;
+                data |= 1u64 << (((i_rank + j) * 8) + i_file);
                 if i_rank + j < 7 {
-                    if 1u64 << ((i_rank + j) * 8) + i_file & blockers.data != BitBoard::ZERO.data {
+                    if 1u64 << (((i_rank + j) * 8) + i_file) & blockers.data != BitBoard::ZERO.data {
                         u_is_blocked = true;
                     }
                 }
@@ -238,9 +238,9 @@ pub(super) const fn naive_rook_attack(i: usize, blockers: BitBoard) -> BitBoard 
         // down direction: (file, rank - j)
         if 0 <= i_rank - j {
             if !d_is_blocked {
-                data |= 1u64 << ((i_rank - j) * 8) + i_file;
+                data |= 1u64 << (((i_rank - j) * 8) + i_file);
                 if 0 < i_rank - j {
-                    if 1u64 << ((i_rank - j) * 8) + i_file & blockers.data != BitBoard::ZERO.data {
+                    if 1u64 << (((i_rank - j) * 8) + i_file) & blockers.data != BitBoard::ZERO.data {
                         d_is_blocked = true;
                     }
                 }
