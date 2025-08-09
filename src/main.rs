@@ -1,10 +1,72 @@
 //use chessbb::chessmove::*;
 use chessbb::*;
+use core::error;
 //use chessbb::chessmove::ChessMove;
+use std::fs::File;
+use std::io::prelude::*;
+use std::path::Path;
 use std::{env, time::Instant};
 
 extern crate chessbb;
 fn main() {
+    let path = Path::new("standard.epd");
+    let display = path.display();
+
+    let mut file = match File::open(&path) {
+        Err(why) => panic!("couldn't open {display}: {why}"),
+        Ok(file) => file,
+    };
+
+    let mut s = String::new();
+    match file.read_to_string(&mut s) {
+        Err(why) => panic!("couldn't read {}: {}", display, why),
+        Ok(_) => print!("{} contains:\n{}", display, s),
+    }
+    //print!("{s}");
+    let lines = s.split('\n');
+    let mut error_vec = Vec::new();
+    let mut num: usize = 0;
+    for line in lines {
+        let mut sections = line.split(';');
+        //let str_vec: Vec<&str> = line.split(';').collect();
+        let start_fen = sections.next().unwrap();
+        num += 1;
+        let mut perft_result: Vec<(usize, usize)> = Vec::new();
+        let mut chessboard = ChessBoard::from_fen(start_fen);
+        println!("\n======== position number {num} ========\n");
+        println!("fen: {start_fen}");
+        println!("{chessboard}");
+        println!("=======================================");
+        for section in sections {
+            let section_vec: Vec<_> = section.split_ascii_whitespace().collect();
+            let depth: usize =
+                section_vec[0].chars().filter(|x| x.is_ascii_digit()).collect::<String>().parse().unwrap();
+            let result_count: u64 = section_vec[1].parse().unwrap();
+            let total_count = chessboard.perft_count(depth);
+            let result_str = match result_count == total_count {
+                true => "Ok!",
+                false => "Error!",
+            };
+            if result_str == "Error!" {
+                error_vec.push(format!(
+                    "start_fen: {start_fen}\ndepth: {depth}, result_count: {result_count}, total_count: {total_count}, {result_str}"
+                ))
+            }
+            println!("depth: {depth}, result_count: {result_count}, total_count: {total_count}, {result_str}");
+        }
+        println!("=======================================");
+    }
+    let has_error = !error_vec.is_empty();
+    if has_error {
+        for str_error in error_vec {
+            println!("{str_error}");
+        }
+    } else {
+        println!("done... no error!");
+    }
+}
+
+fn old_main() {
     unsafe { env::set_var("RUST_BACKTRACE", "full") };
     /* from starting pos */
 
@@ -173,4 +235,22 @@ fn main() {
         println!("\n");
         depth += 1;
     }
+}
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    //#[test]
+    //fn test_add() {
+    //    assert_eq!(add(1, 2), 3);
+    //}
+    //
+    //#[test]
+    //fn test_bad_add() {
+    //    // This assert would fire and test will fail.
+    //    // Please note, that private functions can be tested too!
+    //    assert_eq!(bad_add(1, 2), 3);
+    //}
 }

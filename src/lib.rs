@@ -189,15 +189,15 @@ impl ChessBoard {
                     let king_pos= chessboard.piece_bbs[0].lsb_square().unwrap();
                     let mut check_bitboard = BitBoard::ZERO;
                     //q
-                    check_bitboard |= chessboard.piece_bbs[07] & get_queen_attack(king_pos, blockers);
+                    check_bitboard |= (chessboard.piece_bbs[07] & get_queen_attack(king_pos, blockers));
                     //n
-                    check_bitboard |= chessboard.piece_bbs[08] & get_knight_attack(king_pos);
+                    check_bitboard |= (chessboard.piece_bbs[08] & get_knight_attack(king_pos));
                     //b
-                    check_bitboard |= chessboard.piece_bbs[09] & get_bishop_attack(king_pos, blockers);
+                    check_bitboard |= (chessboard.piece_bbs[09] & get_bishop_attack(king_pos, blockers));
                     //r
-                    check_bitboard |= chessboard.piece_bbs[10] & get_rook_attack(king_pos, blockers);
+                    check_bitboard |= (chessboard.piece_bbs[10] & get_rook_attack(king_pos, blockers));
                     //p
-                    check_bitboard |= chessboard.piece_bbs[11] & get_w_pawn_attack(king_pos);
+                    check_bitboard |= (chessboard.piece_bbs[11] & get_w_pawn_attack(king_pos));
                     chessboard.check_bb = check_bitboard;
                 }
 
@@ -206,15 +206,15 @@ impl ChessBoard {
                     let king_pos = chessboard.piece_bbs[6].lsb_square().unwrap();
                     let mut check_bitboard = BitBoard::ZERO;
                     //Q
-                    check_bitboard |= chessboard.piece_bbs[01] & get_queen_attack(king_pos, blockers);
+                    check_bitboard |= (chessboard.piece_bbs[01] & get_queen_attack(king_pos, blockers));
                     //N
-                    check_bitboard |= chessboard.piece_bbs[02] & get_knight_attack(king_pos);
+                    check_bitboard |= (chessboard.piece_bbs[02] & get_knight_attack(king_pos));
                     //B
-                    check_bitboard |= chessboard.piece_bbs[03] & get_bishop_attack(king_pos, blockers);
+                    check_bitboard |= (chessboard.piece_bbs[03] & get_bishop_attack(king_pos, blockers));
                     //R
-                    check_bitboard |= chessboard.piece_bbs[04] & get_rook_attack(king_pos, blockers);
+                    check_bitboard |= (chessboard.piece_bbs[04] & get_rook_attack(king_pos, blockers));
                     //P
-                    check_bitboard |= chessboard.piece_bbs[05] & get_b_pawn_attack(king_pos);
+                    check_bitboard |= (chessboard.piece_bbs[05] & get_b_pawn_attack(king_pos));
                     chessboard.check_bb = check_bitboard;
                 }
             }
@@ -501,7 +501,6 @@ impl ChessBoard {
         return true;
     }
     
-    
     #[inline(always)]
     pub(crate) fn is_piece_pinned(&self, square: Square) -> bool {
         self.pinned_bb.nth_is_not_zero(square)
@@ -522,14 +521,12 @@ impl ChessBoard {
         return pin_mask;
     } 
     
-    
     #[inline(always)]
     // calculates number of enemy checking piece
     pub(crate) const fn count_checking_pieces(&self) -> u32 {
         self.check_bb.count_ones()
     }
 
-    
     #[inline(always)]
     pub(crate) const fn king_square(&self) -> Square {
         match self.side_to_move {
@@ -557,7 +554,6 @@ impl ChessBoard {
         }
     }
 
-    
     #[inline(always)]
     pub const fn mailbox(&self) -> [Option<(bitboard::Side, bitboard::PieceType)>; 64] {
         self.mailbox

@@ -75,10 +75,6 @@ fn calculate_attacks(cb: &ChessBoard, s: Square, p: PieceType) -> Vec<ChessMove>
 }
 
 fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
-    //chessboard: &ChessBoard,
-    //source: Square,
-    //pinners: BitBoard,
-    //check_mask: BitBoard,
     let chessboard = cb;
     let source = s;
     let pinners = cb.pinner_bb;
