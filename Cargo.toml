@@ -7,11 +7,12 @@ edition = "2024"
 
 [profile.dev]
 opt-level = 3
+debug = 1
 
 [profile.release]
 opt-level = 3
-panic = "abort"
-strip = "symbols"
+#debug = 1
+
 
 [lints.clippy]
 needless_return = "allow"

@@ -7,41 +7,47 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, N
 include!("data/data.rs");
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(super) struct ZorbistHash {
+pub struct ZobristHash {
     value: u64,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub(super) struct ZorbistTable {
-    data: [ZorbistHash; 1 << 14],
+pub struct ZobristTable {
+    data: [ZobristHash; 1 << 14],
     index: usize,
 }
 
-impl ZorbistTable {
-    pub(super) const fn new(hash: ZorbistHash) -> ZorbistTable {
-        let mut data: [ZorbistHash; 1 << 14] = [ZorbistHash { value: 0 }; 1 << 14];
+impl ZobristTable {
+    pub const fn new(hash: ZobristHash) -> ZobristTable {
+        let mut data: [ZobristHash; 1 << 14] = [ZobristHash { value: 0 }; 1 << 14];
         data[0] = hash;
-        return ZorbistTable { data, index: 0 };
+        return ZobristTable { data, index: 0 };
     }
 
     #[inline(always)]
-    pub(super) const fn initial_table() -> ZorbistTable {
-        ZorbistTable::new(ZorbistHash::initial_hash())
+    pub const fn initial_table() -> ZobristTable {
+        ZobristTable::new(ZobristHash::initial_hash())
     }
 
     #[inline(always)]
-    pub(super) const fn add(&mut self, hash: ZorbistHash) {
+    pub const fn add(&mut self, hash: ZobristHash) {
         assert!(self.index < (1 << 14));
         self.index += 1;
         self.data[self.index] = hash;
     }
 
     #[inline(always)]
-    pub(super) const fn last_hash(&self) -> ZorbistHash {
+    pub const fn remove_last(&mut self, hash: ZobristHash) {
+        assert!(self.data[self.index].value == hash.value);
+        self.index -= 1;
+    }
+
+    #[inline(always)]
+    pub const fn last_hash(&self) -> ZobristHash {
         self.data[self.index]
     }
 
-    pub(super) const fn count_hash(&self, hash: ZorbistHash) -> usize {
+    pub const fn count_hash(&self, hash: ZobristHash) -> usize {
         let mut i: usize = 0;
         let mut count: usize = 0;
         while i <= self.index {
@@ -54,13 +60,13 @@ impl ZorbistTable {
     }
 }
 
-impl ZorbistHash {
+impl ZobristHash {
     #[inline(always)]
-    pub(super) const fn new(value: u64) -> ZorbistHash {
-        ZorbistHash { value }
+    pub(super) const fn new(value: u64) -> ZobristHash {
+        ZobristHash { value }
     }
 
-    pub(super) const fn initial_hash() -> ZorbistHash {
+    pub(super) const fn initial_hash() -> ZobristHash {
         let mut value: u64 = 0;
 
         //starting side is white, no hash
@@ -82,10 +88,10 @@ impl ZorbistHash {
             i += 1;
         }
 
-        return ZorbistHash { value };
+        return ZobristHash { value };
     }
 
-    pub(super) const fn compute_hash(chessboard: &ChessBoard) -> ZorbistHash {
+    pub(super) const fn compute_hash(chessboard: &ChessBoard) -> ZobristHash {
         //side hash
         let mut value = match chessboard.side_to_move {
             crate::bitboard::Side::White => 0u64,
@@ -118,10 +124,10 @@ impl ZorbistHash {
             enpassant_bb.pop_bit(square);
         }
 
-        return ZorbistHash { value };
+        return ZobristHash { value };
     }
 
-    pub(super) const fn compute_castle_hash(chessboard: &ChessBoard) -> ZorbistHash {
+    pub(super) const fn compute_castle_hash(chessboard: &ChessBoard) -> ZobristHash {
         let mut value = 0u64;
 
         let mut i: usize = 0;
@@ -131,10 +137,10 @@ impl ZorbistHash {
             }
             i += 1;
         }
-        return ZorbistHash { value };
+        return ZobristHash { value };
     }
 
-    pub(super) const fn compute_enpassant_hash(enpassant_bb: BitBoard) -> ZorbistHash {
+    pub(super) const fn compute_enpassant_hash(enpassant_bb: BitBoard) -> ZobristHash {
         let mut value: u64 = 0;
         let mut enpassant_bb = enpassant_bb;
         while enpassant_bb.is_not_zero() {
@@ -142,7 +148,7 @@ impl ZorbistHash {
             value ^= ENPASSANT_FILE_HASH[COLS[square.to_usize()]];
             enpassant_bb.pop_bit(square);
         }
-        return ZorbistHash { value };
+        return ZobristHash { value };
     }
 
     //const fn update_hash(&self, s: Square, t: Square, s_p: ChessPiece, t_p: Option<ChessPiece>) -> ZorbistHash {
@@ -157,79 +163,79 @@ impl ZorbistHash {
     //}
 
     #[inline(always)]
-    pub(crate) const fn piece_hash(square: Square, chesspiece: ChessPiece) -> ZorbistHash {
-        ZorbistHash { value: PIECE_HASH[square.to_usize()][cp_index(chesspiece)] }
+    pub(crate) const fn piece_hash(square: Square, chesspiece: ChessPiece) -> ZobristHash {
+        ZobristHash { value: PIECE_HASH[square.to_usize()][cp_index(chesspiece)] }
     }
 
     #[inline(always)]
-    pub(crate) const fn castle_hash(castling: Castling) -> ZorbistHash {
+    pub(crate) const fn castle_hash(castling: Castling) -> ZobristHash {
         match castling {
-            Castling::Kingside(Side::White) => ZorbistHash { value: CASTLE_HASH[0] },
-            Castling::Queenside(Side::White) => ZorbistHash { value: CASTLE_HASH[1] },
-            Castling::Kingside(Side::Black) => ZorbistHash { value: CASTLE_HASH[2] },
-            Castling::Queenside(Side::Black) => ZorbistHash { value: CASTLE_HASH[3] },
+            Castling::Kingside(Side::White) => ZobristHash { value: CASTLE_HASH[0] },
+            Castling::Queenside(Side::White) => ZobristHash { value: CASTLE_HASH[1] },
+            Castling::Kingside(Side::Black) => ZobristHash { value: CASTLE_HASH[2] },
+            Castling::Queenside(Side::Black) => ZobristHash { value: CASTLE_HASH[3] },
         }
     }
 
     #[inline(always)]
-    pub(crate) const fn side_hash() -> ZorbistHash {
-        ZorbistHash { value: SIDE_HASH[0] }
+    pub(crate) const fn side_hash() -> ZobristHash {
+        ZobristHash { value: SIDE_HASH[0] }
     }
 }
 
-impl BitAnd for ZorbistHash {
-    type Output = ZorbistHash;
+impl BitAnd for ZobristHash {
+    type Output = ZobristHash;
 
     #[inline(always)]
-    fn bitand(self, rhs: ZorbistHash) -> Self::Output {
-        ZorbistHash { value: self.value & rhs.value }
+    fn bitand(self, rhs: ZobristHash) -> Self::Output {
+        ZobristHash { value: self.value & rhs.value }
     }
 }
 
-impl BitAndAssign for ZorbistHash {
+impl BitAndAssign for ZobristHash {
     #[inline(always)]
     fn bitand_assign(&mut self, rhs: Self) {
         self.value &= rhs.value;
     }
 }
 
-impl BitOr for ZorbistHash {
-    type Output = ZorbistHash;
+impl BitOr for ZobristHash {
+    type Output = ZobristHash;
 
     #[inline(always)]
-    fn bitor(self, rhs: ZorbistHash) -> Self::Output {
-        ZorbistHash { value: self.value | rhs.value }
+    fn bitor(self, rhs: ZobristHash) -> Self::Output {
+        ZobristHash { value: self.value | rhs.value }
     }
 }
 
-impl BitOrAssign for ZorbistHash {
+impl BitOrAssign for ZobristHash {
     #[inline(always)]
     fn bitor_assign(&mut self, rhs: Self) {
         self.value |= rhs.value;
     }
 }
 
-impl BitXor for ZorbistHash {
-    type Output = ZorbistHash;
+impl BitXor for ZobristHash {
+    type Output = ZobristHash;
 
     #[inline(always)]
-    fn bitxor(self, rhs: ZorbistHash) -> Self::Output {
-        ZorbistHash { value: self.value ^ rhs.value }
+    fn bitxor(self, rhs: ZobristHash) -> Self::Output {
+        ZobristHash { value: self.value ^ rhs.value }
     }
 }
 
-impl BitXorAssign for ZorbistHash {
+impl BitXorAssign for ZobristHash {
     #[inline(always)]
     fn bitxor_assign(&mut self, rhs: Self) {
         self.value ^= rhs.value;
     }
 }
 
-impl Not for ZorbistHash {
-    type Output = ZorbistHash;
+impl Not for ZobristHash {
+    type Output = ZobristHash;
 
     #[inline(always)]
     fn not(self) -> Self::Output {
-        ZorbistHash { value: !self.value }
+        ZobristHash { value: !self.value }
     }
 }

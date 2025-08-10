@@ -2,11 +2,11 @@ mod bitboard;
 mod chessmove;
 mod movegen;
 mod square;
-mod zorbist;
+mod zobrist;
 mod perft;
 
 use std::fmt::Display;
-use crate::{bitboard::*, square::Square, zorbist::{ZorbistHash, ZorbistTable}};
+use crate::{bitboard::*, square::Square, zobrist::{ZobristHash, ZobristTable}};
 /* re-export */
 pub use crate::chessmove::ChessMove; //FIXME
 pub use crate::bitboard::{Side, PieceType};
@@ -17,7 +17,7 @@ pub struct ChessBoard {
     piece_bbs: [BitBoard; 12],
     mailbox: [Option<ChessPiece>; 64],
     castle_bools: [bool; 4],
-    enpassant_bb: BitBoard, //pieces triggering en-passant rule
+    enpassant_bb: BitBoard, //square attackable by enemy piece
     check_bb: BitBoard, //pieces triggering check condition
     check_mask: BitBoard, //all the squares attacked by checking pieces;
     pinned_bb: BitBoard, //pieces that are pinned
@@ -25,11 +25,40 @@ pub struct ChessBoard {
     side_to_move: Side,
     full_move_counter: u16,
     fifty_move_rule_counter: u16,
-    zorbist_table: ZorbistTable,
+    zobrist_hash: ZobristHash,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct ChessGame {
+    pub chessboard: ChessBoard,
+    pub zobrist_table: ZobristTable,
+}
+
+impl ChessGame {
+    pub fn start_pos() -> Self {
+        return ChessGame { chessboard: ChessBoard::start_pos(), zobrist_table: ZobristTable::initial_table() };
+    }
+
+    pub fn from_fen(input: &str) -> ChessGame {
+        let chessboard = ChessBoard::from_fen(input);
+        let zobrist_table = ZobristTable::new(chessboard.current_hash());
+        return ChessGame { chessboard, zobrist_table }
+    }
+    pub fn update_state(&mut self, chessmove: ChessMove) {
+        self.chessboard.update_state(chessmove);
+        self.zobrist_table.add(self.chessboard.current_hash());
+    }
+
+    pub fn generate_moves(&self) -> Vec<ChessMove> {
+        if self.zobrist_table.count_hash(self.chessboard.current_hash()) >= 3 {
+            return Vec::new();
+        }
+        return self.chessboard.generate_moves();
+    }
+
 }
 
 impl Default for ChessBoard {
-    
     #[inline(always)]
     fn default() -> Self {
         ChessBoard::start_pos()
@@ -86,7 +115,7 @@ impl ChessBoard {
             side_to_move: Side::White,
             full_move_counter: 0,
             fifty_move_rule_counter: 0,
-            zorbist_table: ZorbistTable::initial_table(),
+            zobrist_hash: ZobristHash::initial_hash(),
         }
     }
     
@@ -222,7 +251,7 @@ impl ChessBoard {
         chessboard.compute_pin_data();
         chessboard.compute_check_bb();
         chessboard.compute_check_mask();
-        chessboard.zorbist_table = ZorbistTable::new(ZorbistHash::compute_hash(&chessboard));
+        chessboard.zobrist_hash = ZobristHash::compute_hash(&chessboard);
         return chessboard;
     }
     
@@ -260,7 +289,7 @@ impl ChessBoard {
             side_to_move: self.side_to_move,
             full_move_counter: self.full_move_counter,
             fifty_move_rule_counter: self.fifty_move_rule_counter,
-            zorbist_table: self.zorbist_table,
+            zobrist_hash: self.zobrist_hash,
         }
     }
 
@@ -316,14 +345,8 @@ impl ChessBoard {
 
     
     #[inline(always)]
-    pub(crate) const fn current_hash(&self) -> ZorbistHash {
-        self.zorbist_table.last_hash()
-    }
-
-    
-    #[inline(always)]
-    pub(crate) const fn count_hash(&self, hash: ZorbistHash) -> usize {
-        self.zorbist_table.count_hash(hash)
+    pub(crate) const fn current_hash(&self) -> ZobristHash {
+        self.zobrist_hash
     }
 
     //TODO maybe is_square_attacked should have parameterized blockers?

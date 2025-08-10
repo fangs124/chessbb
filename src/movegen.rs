@@ -333,7 +333,7 @@ impl ChessBoard {
         let target_piece = self.mailbox[target.to_usize()];
 
         let mut current_hash = self.current_hash();
-        current_hash ^= ZorbistHash::compute_enpassant_hash(self.enpassant_bb);
+        current_hash ^= ZobristHash::compute_enpassant_hash(self.enpassant_bb);
 
         let mut is_counter_reset: bool = false; //fifty-move-rule counter
 
@@ -342,21 +342,21 @@ impl ChessBoard {
             /* castling */
             (Side::White, PieceType::King) => {
                 if self.castle_bools[0] {
-                    current_hash ^= ZorbistHash::castle_hash(Castling::Kingside(Side::White));
+                    current_hash ^= ZobristHash::castle_hash(Castling::Kingside(Side::White));
                 }
                 self.castle_bools[0] = false;
                 if self.castle_bools[1] {
-                    current_hash ^= ZorbistHash::castle_hash(Castling::Queenside(Side::White));
+                    current_hash ^= ZobristHash::castle_hash(Castling::Queenside(Side::White));
                 }
                 self.castle_bools[1] = false;
             }
             (Side::Black, PieceType::King) => {
                 if self.castle_bools[2] {
-                    current_hash ^= ZorbistHash::castle_hash(Castling::Kingside(Side::Black));
+                    current_hash ^= ZobristHash::castle_hash(Castling::Kingside(Side::Black));
                 }
                 self.castle_bools[2] = false;
                 if self.castle_bools[3] {
-                    current_hash ^= ZorbistHash::castle_hash(Castling::Queenside(Side::Black));
+                    current_hash ^= ZobristHash::castle_hash(Castling::Queenside(Side::Black));
                 }
                 self.castle_bools[3] = false;
             }
@@ -364,12 +364,12 @@ impl ChessBoard {
                 //FIXME
                 if source == Square::new(0) {
                     if self.castle_bools[0] {
-                        current_hash ^= ZorbistHash::castle_hash(Castling::Kingside(Side::White));
+                        current_hash ^= ZobristHash::castle_hash(Castling::Kingside(Side::White));
                     }
                     self.castle_bools[0] = false;
                 } else if source == Square::new(7) {
                     if self.castle_bools[1] {
-                        current_hash ^= ZorbistHash::castle_hash(Castling::Queenside(Side::White));
+                        current_hash ^= ZobristHash::castle_hash(Castling::Queenside(Side::White));
                     }
                     self.castle_bools[1] = false
                 }
@@ -378,12 +378,12 @@ impl ChessBoard {
                 //FIXME
                 if source == Square::new(56) {
                     if self.castle_bools[2] {
-                        current_hash ^= ZorbistHash::castle_hash(Castling::Kingside(Side::Black));
+                        current_hash ^= ZobristHash::castle_hash(Castling::Kingside(Side::Black));
                     }
                     self.castle_bools[2] = false;
                 } else if source == Square::new(63) {
                     if self.castle_bools[3] {
-                        current_hash ^= ZorbistHash::castle_hash(Castling::Queenside(Side::Black));
+                        current_hash ^= ZobristHash::castle_hash(Castling::Queenside(Side::Black));
                     }
                     self.castle_bools[3] = false
                 }
@@ -435,8 +435,8 @@ impl ChessBoard {
         //move the piece
         self.piece_bbs[source_index].pop_bit(source);
         self.piece_bbs[source_index].set_bit(target);
-        current_hash ^= ZorbistHash::piece_hash(source, source_piece);
-        current_hash ^= ZorbistHash::piece_hash(target, source_piece);
+        current_hash ^= ZobristHash::piece_hash(source, source_piece);
+        current_hash ^= ZobristHash::piece_hash(target, source_piece);
         self.mailbox[source.to_usize()] = None;
         self.mailbox[target.to_usize()] = Some(source_piece);
 
@@ -447,7 +447,7 @@ impl ChessBoard {
                 if let Some(target_piece) = target_piece {
                     let target_index = cp_index(target_piece);
                     self.piece_bbs[target_index].pop_bit(target);
-                    current_hash ^= ZorbistHash::piece_hash(target, target_piece);
+                    current_hash ^= ZobristHash::piece_hash(target, target_piece);
 
                     //reset 50-move rule
                     self.fifty_move_rule_counter = 0;
@@ -457,25 +457,25 @@ impl ChessBoard {
                     match (target_piece, target.to_u8()) {
                         (cpt!(R), 00u8) => {
                             if self.castle_bools[0] {
-                                current_hash ^= ZorbistHash::castle_hash(Castling::Kingside(Side::White));
+                                current_hash ^= ZobristHash::castle_hash(Castling::Kingside(Side::White));
                             }
                             self.castle_bools[0] = false;
                         }
                         (cpt!(R), 07u8) => {
                             if self.castle_bools[1] {
-                                current_hash ^= ZorbistHash::castle_hash(Castling::Queenside(Side::White));
+                                current_hash ^= ZobristHash::castle_hash(Castling::Queenside(Side::White));
                             }
                             self.castle_bools[1] = false;
                         }
                         (cpt!(r), 56u8) => {
                             if self.castle_bools[2] {
-                                current_hash ^= ZorbistHash::castle_hash(Castling::Kingside(Side::Black));
+                                current_hash ^= ZobristHash::castle_hash(Castling::Kingside(Side::Black));
                             }
                             self.castle_bools[2] = false;
                         }
                         (cpt!(r), 63u8) => {
                             if self.castle_bools[3] {
-                                current_hash ^= ZorbistHash::castle_hash(Castling::Queenside(Side::Black));
+                                current_hash ^= ZobristHash::castle_hash(Castling::Queenside(Side::Black));
                             }
                             self.castle_bools[3] = false;
                         }
@@ -503,8 +503,8 @@ impl ChessBoard {
                         self.mailbox[white_kingside_rook_sq_target.to_usize()] = opt_cpt!(R);
 
                         //update hash
-                        current_hash ^= ZorbistHash::piece_hash(white_kingside_rook_sq_source, cpt!(R));
-                        current_hash ^= ZorbistHash::piece_hash(white_kingside_rook_sq_target, cpt!(R));
+                        current_hash ^= ZobristHash::piece_hash(white_kingside_rook_sq_source, cpt!(R));
+                        current_hash ^= ZobristHash::piece_hash(white_kingside_rook_sq_target, cpt!(R));
                     }
 
                     Castling::Queenside(Side::White) => {
@@ -516,8 +516,8 @@ impl ChessBoard {
                         self.mailbox[white_queenside_rook_sq_target.to_usize()] = opt_cpt!(R);
 
                         //update hash
-                        current_hash ^= ZorbistHash::piece_hash(white_queenside_rook_sq_source, cpt!(R));
-                        current_hash ^= ZorbistHash::piece_hash(white_queenside_rook_sq_target, cpt!(R));
+                        current_hash ^= ZobristHash::piece_hash(white_queenside_rook_sq_source, cpt!(R));
+                        current_hash ^= ZobristHash::piece_hash(white_queenside_rook_sq_target, cpt!(R));
                     }
 
                     Castling::Kingside(Side::Black) => {
@@ -529,8 +529,8 @@ impl ChessBoard {
                         self.mailbox[black_kingside_rook_sq_target.to_usize()] = opt_cpt!(r);
 
                         //update hash
-                        current_hash ^= ZorbistHash::piece_hash(black_kingside_rook_sq_source, cpt!(r));
-                        current_hash ^= ZorbistHash::piece_hash(black_kingside_rook_sq_target, cpt!(r));
+                        current_hash ^= ZobristHash::piece_hash(black_kingside_rook_sq_source, cpt!(r));
+                        current_hash ^= ZobristHash::piece_hash(black_kingside_rook_sq_target, cpt!(r));
                     }
 
                     Castling::Queenside(Side::Black) => {
@@ -542,8 +542,8 @@ impl ChessBoard {
                         self.mailbox[black_queenside_rook_sq_target.to_usize()] = opt_cpt!(r);
 
                         //update hash
-                        current_hash ^= ZorbistHash::piece_hash(black_queenside_rook_sq_source, cpt!(r));
-                        current_hash ^= ZorbistHash::piece_hash(black_queenside_rook_sq_target, cpt!(r));
+                        current_hash ^= ZobristHash::piece_hash(black_queenside_rook_sq_source, cpt!(r));
+                        current_hash ^= ZobristHash::piece_hash(black_queenside_rook_sq_target, cpt!(r));
                     }
                 }
             }
@@ -572,7 +572,7 @@ impl ChessBoard {
                 );
 
                 self.piece_bbs[enemy_pawn_index].pop_bit(enemy_pawn_square);
-                current_hash ^= ZorbistHash::piece_hash(enemy_pawn_square, enemy_piece);
+                current_hash ^= ZobristHash::piece_hash(enemy_pawn_square, enemy_piece);
                 self.mailbox[enemy_pawn_square.to_usize()] = None;
             }
 
@@ -584,7 +584,7 @@ impl ChessBoard {
                 if let Some(target_piece) = target_piece {
                     let target_index = cp_index(target_piece);
                     self.piece_bbs[target_index].pop_bit(target);
-                    current_hash ^= ZorbistHash::piece_hash(target, target_piece);
+                    current_hash ^= ZobristHash::piece_hash(target, target_piece);
 
                     //reset 50-move rule
                     self.fifty_move_rule_counter = 0;
@@ -594,25 +594,25 @@ impl ChessBoard {
                     match (target_piece, target.to_u8()) {
                         (cpt!(R), 00u8) => {
                             if self.castle_bools[0] {
-                                current_hash ^= ZorbistHash::castle_hash(Castling::Kingside(Side::White));
+                                current_hash ^= ZobristHash::castle_hash(Castling::Kingside(Side::White));
                             }
                             self.castle_bools[0] = false;
                         }
                         (cpt!(R), 07u8) => {
                             if self.castle_bools[1] {
-                                current_hash ^= ZorbistHash::castle_hash(Castling::Queenside(Side::White));
+                                current_hash ^= ZobristHash::castle_hash(Castling::Queenside(Side::White));
                             }
                             self.castle_bools[1] = false;
                         }
                         (cpt!(r), 56u8) => {
                             if self.castle_bools[2] {
-                                current_hash ^= ZorbistHash::castle_hash(Castling::Kingside(Side::Black));
+                                current_hash ^= ZobristHash::castle_hash(Castling::Kingside(Side::Black));
                             }
                             self.castle_bools[2] = false;
                         }
                         (cpt!(r), 63u8) => {
                             if self.castle_bools[3] {
-                                current_hash ^= ZorbistHash::castle_hash(Castling::Queenside(Side::Black));
+                                current_hash ^= ZobristHash::castle_hash(Castling::Queenside(Side::Black));
                             }
                             self.castle_bools[3] = false;
                         }
@@ -622,11 +622,11 @@ impl ChessBoard {
 
                 //remove the pawn piece
                 self.piece_bbs[source_index].pop_bit(target);
-                current_hash ^= ZorbistHash::piece_hash(target, source_piece);
+                current_hash ^= ZobristHash::piece_hash(target, source_piece);
 
                 //add the promoted piece
                 self.piece_bbs[promoted_index].set_bit(target);
-                current_hash ^= ZorbistHash::piece_hash(target, promoted_piece);
+                current_hash ^= ZobristHash::piece_hash(target, promoted_piece);
                 self.mailbox[target.to_usize()] = Some(promoted_piece);
             }
         }
@@ -635,13 +635,13 @@ impl ChessBoard {
             self.full_move_counter += 1;
         }
         self.side_to_move = self.side_to_move.update();
-        current_hash ^= ZorbistHash::side_hash();
+        current_hash ^= ZobristHash::side_hash();
         if is_counter_reset == false {
             self.fifty_move_rule_counter += 1;
         }
         self.enpassant_bb = enpassant_bb;
-        current_hash ^= ZorbistHash::compute_enpassant_hash(enpassant_bb);
-        self.zorbist_table.add(current_hash);
+        current_hash ^= ZobristHash::compute_enpassant_hash(enpassant_bb);
+        self.zobrist_hash = current_hash;
         self.compute_check_bb();
         self.compute_check_mask();
         self.compute_pin_data();
@@ -649,11 +649,6 @@ impl ChessBoard {
 
     pub fn generate_moves(&self) -> Vec<ChessMove> {
         let mut moves: Vec<ChessMove> = Vec::new();
-        //if three fold repetition, return empty set of moves
-        if self.count_hash(self.current_hash()) >= 3 {
-            return moves;
-        }
-
         let side = self.side_to_move;
 
         // consider if king is in check

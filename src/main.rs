@@ -9,6 +9,8 @@ use std::{env, time::Instant};
 
 extern crate chessbb;
 fn main() {
+    //old_main();
+
     let path = Path::new("standard.epd");
     let display = path.display();
 
@@ -32,17 +34,17 @@ fn main() {
         let start_fen = sections.next().unwrap();
         num += 1;
         let mut perft_result: Vec<(usize, usize)> = Vec::new();
-        let mut chessboard = ChessBoard::from_fen(start_fen);
+        let mut chessgame = ChessGame::from_fen(start_fen);
         println!("\n======== position number {num} ========\n");
         println!("fen: {start_fen}");
-        println!("{chessboard}");
+        println!("{}", chessgame.chessboard);
         println!("=======================================");
         for section in sections {
             let section_vec: Vec<_> = section.split_ascii_whitespace().collect();
             let depth: usize =
                 section_vec[0].chars().filter(|x| x.is_ascii_digit()).collect::<String>().parse().unwrap();
             let result_count: u64 = section_vec[1].parse().unwrap();
-            let total_count = chessboard.perft_count(depth);
+            let total_count = chessgame.perft_count(depth);
             let result_str = match result_count == total_count {
                 true => "Ok!",
                 false => "Error!",
@@ -74,11 +76,11 @@ fn old_main() {
     //
     let datas = [];
     let moves = datas.map(|x| return ChessMove { data: x });
-    let mut chessboard = ChessBoard::from_fen(start_fen);
+    let mut chessgame = ChessGame::from_fen(start_fen);
     for chessmove in moves {
-        chessboard.update_state(chessmove);
+        chessgame.update_state(chessmove);
     }
-    let mut moves = chessboard.generate_moves();
+    let mut moves = chessgame.generate_moves();
     moves.sort();
 
     //old test
@@ -192,7 +194,7 @@ fn old_main() {
     //println!("chessboard.check_bb:\n{}\n", chessboard.check_bb);
     //println!("chessboard.check_mask:\n{}\n", chessboard.check_mask);
     println!("==== start position ====\n");
-    println!("{chessboard}");
+    println!("{}", chessgame.chessboard);
     let mut result_str_vec = Vec::<String>::new();
     for chessmove in moves {
         let mut s = chessmove.print_move();
@@ -209,19 +211,19 @@ fn old_main() {
     //println!("mailbox:\n{:#?}", chessboard.mailbox());
     //println!("========================");
     //panic!();
-    let mut depth: usize = 1;
+    let mut depth: usize = 6;
     let max_depth: usize = 6;
     while depth <= max_depth {
         let now = Instant::now();
-        let total = chessboard.perft_count(depth);
+        let total = chessgame.perft_count(depth);
         let elapsed = now.elapsed();
-        let mut moves = chessboard.generate_moves();
+        let mut moves = chessgame.generate_moves();
         moves.sort();
         let mut result_str_vec = Vec::<String>::new();
 
         for chessmove in moves {
             let mut s = chessmove.print_move();
-            let mut state = chessboard.duplicate();
+            let mut state = chessgame.clone();
             state.update_state(chessmove);
             let branch_total = state.perft_count(depth - 1);
             s.push_str(format!(" - {branch_total}").as_str());
