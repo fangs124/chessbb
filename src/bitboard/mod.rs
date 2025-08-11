@@ -5,10 +5,6 @@ use crate::square::Square;
 pub mod bit_ops;
 pub mod attack;
 
-
-
-/* last revised: 8/8/2025 */
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct BitBoard {
     data: u64,

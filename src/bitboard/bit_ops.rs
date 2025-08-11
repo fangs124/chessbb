@@ -2,8 +2,6 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, N
 
 use crate::bitboard::BitBoard;
 
-/* last revised: 8/8/2025 */
-
 impl BitAnd for BitBoard {
     type Output = BitBoard;
 

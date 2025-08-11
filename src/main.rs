@@ -9,8 +9,8 @@ use std::{env, time::Instant};
 
 extern crate chessbb;
 fn main() {
-    //old_main();
-
+    old_main();
+    /*
     let path = Path::new("standard.epd");
     let display = path.display();
 
@@ -65,7 +65,7 @@ fn main() {
         }
     } else {
         println!("done... no error!");
-    }
+    }*/
 }
 
 fn old_main() {
@@ -211,8 +211,8 @@ fn old_main() {
     //println!("mailbox:\n{:#?}", chessboard.mailbox());
     //println!("========================");
     //panic!();
-    let mut depth: usize = 6;
-    let max_depth: usize = 6;
+    let mut depth: usize = 5;
+    let max_depth: usize = 5;
     while depth <= max_depth {
         let now = Instant::now();
         let total = chessgame.perft_count(depth);

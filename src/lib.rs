@@ -1,37 +1,25 @@
 mod bitboard;
 mod chessmove;
 mod movegen;
+mod perft;
 mod square;
 mod zobrist;
-mod perft;
 
+use crate::{
+    bitboard::*,
+    square::Square,
+    zobrist::{ZobristHash, ZobristTable},
+};
 use std::fmt::Display;
-use crate::{bitboard::*, square::Square, zobrist::{ZobristHash, ZobristTable}};
-/* re-export */
-pub use crate::chessmove::ChessMove; //FIXME
-pub use crate::bitboard::{Side, PieceType};
 
-/* ChessBoard encodes the board-state of the game */
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct ChessBoard {
-    piece_bbs: [BitBoard; 12],
-    mailbox: [Option<ChessPiece>; 64],
-    castle_bools: [bool; 4],
-    enpassant_bb: BitBoard, //square attackable by enemy piece
-    check_bb: BitBoard, //pieces triggering check condition
-    check_mask: BitBoard, //all the squares attacked by checking pieces;
-    pinned_bb: BitBoard, //pieces that are pinned
-    pinner_bb: BitBoard, //pieces doing the pin
-    side_to_move: Side,
-    full_move_counter: u16,
-    fifty_move_rule_counter: u16,
-    zobrist_hash: ZobristHash,
-}
+/* re-export */
+pub use crate::bitboard::{PieceType, Side};
+pub use crate::chessmove::ChessMove;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct ChessGame {
     pub chessboard: ChessBoard,
-    pub zobrist_table: ZobristTable,
+    zobrist_table: ZobristTable,
 }
 
 impl ChessGame {
@@ -42,7 +30,7 @@ impl ChessGame {
     pub fn from_fen(input: &str) -> ChessGame {
         let chessboard = ChessBoard::from_fen(input);
         let zobrist_table = ZobristTable::new(chessboard.current_hash());
-        return ChessGame { chessboard, zobrist_table }
+        return ChessGame { chessboard, zobrist_table };
     }
     pub fn update_state(&mut self, chessmove: ChessMove) {
         self.chessboard.update_state(chessmove);
@@ -55,8 +43,25 @@ impl ChessGame {
         }
         return self.chessboard.generate_moves();
     }
-
 }
+
+/* ChessBoard encodes the board-state of the game */
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct ChessBoard {
+    piece_bbs: [BitBoard; 12],
+    mailbox: [Option<ChessPiece>; 64],
+    castle_bools: [bool; 4],
+    enpassant_bb: BitBoard, //square attackable by enemy piece
+    check_bb: BitBoard,     //pieces triggering check condition
+    check_mask: BitBoard,   //all the squares attacked by checking pieces;
+    pinned_bb: BitBoard,    //pieces that are pinned
+    pinner_bb: BitBoard,    //pieces doing the pin
+    side_to_move: Side,
+    full_move_counter: u16,
+    fifty_move_rule_counter: u16,
+    zobrist_hash: ZobristHash,
+}
+
 
 impl Default for ChessBoard {
     #[inline(always)]
@@ -566,7 +571,7 @@ impl ChessBoard {
             (Side::White, PieceType::Queen ) => self.piece_bbs[01],
             (Side::White, PieceType::Knight) => self.piece_bbs[02],
             (Side::White, PieceType::Bishop) => self.piece_bbs[03],
-            (Side::White, PieceType::Rook )  => self.piece_bbs[04],
+            (Side::White, PieceType::Rook  ) => self.piece_bbs[04],
             (Side::White, PieceType::Pawn  ) => self.piece_bbs[05],
             (Side::Black, PieceType::King  ) => self.piece_bbs[06],
             (Side::Black, PieceType::Queen ) => self.piece_bbs[07],
