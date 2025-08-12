@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, slice::Iter};
 pub use crate::bitboard::attack::*;
 use crate::square::Square;
 
@@ -22,6 +22,11 @@ impl Side {
             Side::White => Side::Black,
             Side::Black => Side::White,
         }
+    }
+    const SIDES: [Side; 2] = [Side::White, Side::Black];
+
+    pub fn iterator() -> Iter<'static, Side> {
+        return Side::SIDES.iter();
     }
 }
 

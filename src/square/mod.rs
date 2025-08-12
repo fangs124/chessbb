@@ -36,9 +36,9 @@ impl Square {
     //    self.data +8
     //}
 
-    //pub fn iterator() -> std::slice::Iter<'static, Square> {
-    //    SQUARES.iter()
-    //}
+    pub fn iterator() -> std::slice::Iter<'static, Square> {
+        SQUARES.iter()
+    }
 
     //pub(crate) const fn squares_array_usize() -> [usize; 64] {
     //    SQUARES_RAW_USIZE
