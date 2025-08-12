@@ -7,7 +7,6 @@ mod zobrist;
 
 use crate::{
     bitboard::*,
-    square::Square,
     zobrist::{ZobristHash, ZobristTable},
 };
 use std::fmt::Display;
@@ -15,6 +14,7 @@ use std::fmt::Display;
 /* re-export */
 pub use crate::bitboard::{PieceType, Side};
 pub use crate::chessmove::ChessMove;
+pub use crate::square::Square;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct ChessGame {

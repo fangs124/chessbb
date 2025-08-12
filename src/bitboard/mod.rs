@@ -41,7 +41,7 @@ pub enum PieceType {
 }
 
 impl PieceType {
-    pub(crate) fn iterator() -> std::slice::Iter<'static, PieceType> {
+    pub fn iterator() -> std::slice::Iter<'static, PieceType> {
         const PIECETYPES: [PieceType; 6] =
             [PieceType::Pawn, PieceType::Knight, PieceType::Bishop, PieceType::Rook, PieceType::Queen, PieceType::King];
         PIECETYPES.iter()
