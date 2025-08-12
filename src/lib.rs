@@ -12,7 +12,7 @@ use crate::{
 use std::fmt::Display;
 
 /* re-export */
-pub use crate::bitboard::{PieceType, Side};
+pub use crate::bitboard::{PieceType, Side, ChessPiece};
 pub use crate::chessmove::ChessMove;
 pub use crate::square::Square;
 
@@ -44,6 +44,14 @@ impl ChessGame {
         return self.chessboard.generate_moves();
     }
 }
+
+// note: castle_bools[] = [white-king  side castle,
+//                         white-queen side castle,
+//                         black-king  side castle,
+//                         black-queen side castle]
+//
+// pieces: white king, white queen, white knight, white bishop, white rook, white pawn,
+//         black king, black queen, black knight, black bishop, black rook, black pawn,
 
 /* ChessBoard encodes the board-state of the game */
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -106,7 +114,13 @@ impl Display for ChessBoard {
 }
 
 impl ChessBoard {
-    
+    pub const fn is_present(&self, piece_type: ChessPiece, square: Square) -> bool {
+        matches!(self.mailbox[square.to_usize()], Some(piece_type))
+    }
+    pub fn mailbox_iterator(&self) -> std::slice::Iter<'_, Option<(bitboard::Side, bitboard::PieceType)>> {
+        self.mailbox.iter()
+    }
+
     pub const fn start_pos() -> Self {
         Self {
             piece_bbs: ChessBoard::INITIAL_CHESS_POS,

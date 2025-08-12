@@ -41,10 +41,11 @@ pub enum PieceType {
 }
 
 impl PieceType {
+    const PIECETYPES: [PieceType; 6] =
+            [PieceType::King ,PieceType::Queen, PieceType::Knight, PieceType::Bishop, PieceType::Rook, PieceType::Pawn];
     pub fn iterator() -> std::slice::Iter<'static, PieceType> {
-        const PIECETYPES: [PieceType; 6] =
-            [PieceType::Pawn, PieceType::Knight, PieceType::Bishop, PieceType::Rook, PieceType::Queen, PieceType::King];
-        PIECETYPES.iter()
+        
+        PieceType::PIECETYPES.iter()
     }
 
     pub(crate) const fn to_uci_char(&self) -> char {
