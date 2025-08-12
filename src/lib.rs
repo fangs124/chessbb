@@ -280,6 +280,10 @@ impl ChessBoard {
         panic!("square_index error: invalid square!");
     }
 
+    #[inline(always)]
+    pub const fn side(&self) -> Side {
+        return self.side_to_move;
+    }
     
     pub const fn duplicate(&self) -> ChessBoard {
         ChessBoard {
