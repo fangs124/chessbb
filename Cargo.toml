@@ -3,8 +3,6 @@ name = "chessbb"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
-
 [profile.dev]
 opt-level = 3
 debug = 1
@@ -22,3 +20,4 @@ bool_comparison = "allow"
 large_const_arrays = "allow"
 match_like_matches_macro = "allow"
 collapsible_if = "allow"
+

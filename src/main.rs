@@ -76,7 +76,7 @@ fn old_main() {
     //
     let datas = [];
     let moves = datas.map(|x| return ChessMove { data: x });
-    let mut chessgame = ChessGame::from_fen(start_fen);
+    let mut chessgame = ChessBoard::from_fen(start_fen);
     for chessmove in moves {
         chessgame.update_state(chessmove);
     }
@@ -194,7 +194,7 @@ fn old_main() {
     //println!("chessboard.check_bb:\n{}\n", chessboard.check_bb);
     //println!("chessboard.check_mask:\n{}\n", chessboard.check_mask);
     println!("==== start position ====\n");
-    println!("{}", chessgame.chessboard);
+    println!("{}", chessgame);
     let mut result_str_vec = Vec::<String>::new();
     for chessmove in moves {
         let mut s = chessmove.print_move();

@@ -1,8 +1,8 @@
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
+
 use crate::bitboard::*;
 use crate::chessmove::Castling;
-use crate::{ChessBoard, square::Square};
-
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
+use crate::{ChessBoardCore, square::Square};
 
 include!("data/data.rs");
 
@@ -75,7 +75,7 @@ impl ZobristHash {
         //piece hash
         let mut i: usize = 0;
         while i < 64 {
-            if let Some(piece_data) = ChessBoard::INITIAL_MAILBOX[i] {
+            if let Some(piece_data) = ChessBoardCore::INITIAL_MAILBOX[i] {
                 value ^= PIECE_HASH[i][cp_index(piece_data)];
             }
             i += 1;
@@ -91,7 +91,7 @@ impl ZobristHash {
         return ZobristHash { value };
     }
 
-    pub(super) const fn compute_hash(chessboard: &ChessBoard) -> ZobristHash {
+    pub(super) const fn compute_hash(chessboard: &ChessBoardCore) -> ZobristHash {
         //side hash
         let mut value = match chessboard.side_to_move {
             crate::bitboard::Side::White => 0u64,
@@ -127,7 +127,7 @@ impl ZobristHash {
         return ZobristHash { value };
     }
 
-    pub(super) const fn compute_castle_hash(chessboard: &ChessBoard) -> ZobristHash {
+    pub(super) const fn compute_castle_hash(chessboard: &ChessBoardCore) -> ZobristHash {
         let mut value = 0u64;
 
         let mut i: usize = 0;

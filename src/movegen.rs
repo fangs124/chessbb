@@ -1,7 +1,7 @@
 use super::chessmove::*;
 use super::*;
 
-fn calculate_attacks(cb: &ChessBoard, s: Square, p: PieceType) -> Vec<ChessMove> {
+fn calculate_attacks(cb: &ChessBoardCore, s: Square, p: PieceType) -> Vec<ChessMove> {
     //pawn rules are complex, best handled separately, use calculate_pawn_moves(...)
     //assert!(p != PieceType::Pawn);
     if matches!(p, PieceType::Pawn) {
@@ -74,7 +74,7 @@ fn calculate_attacks(cb: &ChessBoard, s: Square, p: PieceType) -> Vec<ChessMove>
     return moves;
 }
 
-fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
+fn calculate_pawn_moves(cb: &ChessBoardCore, s: Square) -> Vec<ChessMove> {
     let chessboard = cb;
     let source = s;
     let pinners = cb.pinner_bb;
@@ -281,7 +281,7 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
                 //check if en-passant leaves king in check
                 //FIXME this is computationally costly
                 //FIXME bug here
-                let mut test_cb: ChessBoard = chessboard.duplicate();
+                let mut test_cb: ChessBoardCore = chessboard.duplicate();
                 let i = match side {
                     Side::White => cpt_index!(P),
                     Side::Black => cpt_index!(p),
@@ -323,7 +323,7 @@ fn calculate_pawn_moves(cb: &ChessBoard, s: Square) -> Vec<ChessMove> {
     return moves;
 }
 
-impl ChessBoard {
+impl ChessBoardCore {
     pub fn update_state(&mut self, chess_move: ChessMove) {
         let mut enpassant_bb: BitBoard = BitBoard::ZERO;
         let source: Square = chess_move.source();
@@ -332,7 +332,7 @@ impl ChessBoard {
         let source_index = cp_index(source_piece);
         let target_piece = self.mailbox[target.to_usize()];
 
-        let mut current_hash = self.current_hash();
+        let mut current_hash = self.hash();
         current_hash ^= ZobristHash::compute_enpassant_hash(self.enpassant_bb);
 
         let mut is_counter_reset: bool = false; //fifty-move-rule counter

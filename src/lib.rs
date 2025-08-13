@@ -1,6 +1,10 @@
+use std::fmt::Display;
+
+
 mod bitboard;
 mod chessmove;
 mod movegen;
+mod search;
 mod perft;
 mod square;
 mod zobrist;
@@ -9,7 +13,7 @@ use crate::{
     bitboard::*,
     zobrist::{ZobristHash, ZobristTable},
 };
-use std::fmt::Display;
+
 
 /* re-export */
 pub use crate::bitboard::{PieceType, Side, ChessPiece};
@@ -17,31 +21,67 @@ pub use crate::chessmove::ChessMove;
 pub use crate::square::Square;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct ChessGame {
-    pub chessboard: ChessBoard,
+pub struct ChessBoard {
+    core: ChessBoardCore,
     zobrist_table: ZobristTable,
 }
 
-impl ChessGame {
+impl Display for ChessBoard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        return self.core.fmt(f);
+    }
+}
+
+impl ChessBoard {
+    #[inline(always)]
     pub fn start_pos() -> Self {
-        return ChessGame { chessboard: ChessBoard::start_pos(), zobrist_table: ZobristTable::initial_table() };
+        return ChessBoard { core: ChessBoardCore::start_pos(), zobrist_table: ZobristTable::initial_table() };
     }
 
-    pub fn from_fen(input: &str) -> ChessGame {
-        let chessboard = ChessBoard::from_fen(input);
-        let zobrist_table = ZobristTable::new(chessboard.current_hash());
-        return ChessGame { chessboard, zobrist_table };
+    #[inline(always)]
+    pub fn from_fen(input: &str) -> ChessBoard {
+        let chessboard = ChessBoardCore::from_fen(input);
+        let zobrist_table = ZobristTable::new(chessboard.hash());
+        return ChessBoard { core: chessboard, zobrist_table };
     }
+
+    #[inline(always)]
     pub fn update_state(&mut self, chessmove: ChessMove) {
-        self.chessboard.update_state(chessmove);
-        self.zobrist_table.add(self.chessboard.current_hash());
+        self.core.update_state(chessmove);
+        self.zobrist_table.add(self.core.hash());
     }
 
+    #[inline(always)]
     pub fn generate_moves(&self) -> Vec<ChessMove> {
-        if self.zobrist_table.count_hash(self.chessboard.current_hash()) >= 3 {
+        if self.zobrist_table.count_hash(self.core.hash()) >= 3 {
             return Vec::new();
         }
-        return self.chessboard.generate_moves();
+        return self.core.generate_moves();
+    }
+    
+    #[inline(always)]
+    pub fn mailbox_iterator(&self) -> std::slice::Iter<'_, Option<(bitboard::Side, bitboard::PieceType)>> {
+        return self.core.mailbox_iterator();
+    }
+
+    #[inline(always)]
+    pub fn hash(&self) -> ZobristHash {
+        self.core.hash()
+    }
+
+    #[inline(always)]
+    pub fn hash_count(&self, hash: ZobristHash) -> usize {
+        self.zobrist_table.count_hash(hash)
+    }
+
+    #[inline(always)]
+    pub fn side(&self) -> Side {
+        self.core.side()
+    }
+
+    #[inline(always)]
+    pub fn is_king_in_check(&self, side:Side) -> bool {
+        self.core.is_king_in_check(side)
     }
 }
 
@@ -54,8 +94,9 @@ impl ChessGame {
 //         black king, black queen, black knight, black bishop, black rook, black pawn,
 
 /* ChessBoard encodes the board-state of the game */
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct ChessBoard {
+pub struct ChessBoardCore {
     piece_bbs: [BitBoard; 12],
     mailbox: [Option<ChessPiece>; 64],
     castle_bools: [bool; 4],
@@ -71,15 +112,15 @@ pub struct ChessBoard {
 }
 
 
-impl Default for ChessBoard {
+impl Default for ChessBoardCore {
     #[inline(always)]
     fn default() -> Self {
-        ChessBoard::start_pos()
+        ChessBoardCore::start_pos()
     }
 }
 
 //TODO rewrite this
-impl Display for ChessBoard {
+impl Display for ChessBoardCore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
 
@@ -113,9 +154,10 @@ impl Display for ChessBoard {
     }
 }
 
-impl ChessBoard {
+impl ChessBoardCore {
     pub const fn is_present(&self, piece_type: ChessPiece, square: Square) -> bool {
         matches!(self.mailbox[square.to_usize()], Some(piece_type))
+    
     }
     pub fn mailbox_iterator(&self) -> std::slice::Iter<'_, Option<(bitboard::Side, bitboard::PieceType)>> {
         self.mailbox.iter()
@@ -123,8 +165,8 @@ impl ChessBoard {
 
     pub const fn start_pos() -> Self {
         Self {
-            piece_bbs: ChessBoard::INITIAL_CHESS_POS,
-            mailbox: ChessBoard::INITIAL_MAILBOX,
+            piece_bbs: ChessBoardCore::INITIAL_CHESS_POS,
+            mailbox: ChessBoardCore::INITIAL_MAILBOX,
             castle_bools: [true; 4],
             enpassant_bb: BitBoard::ZERO,
             check_bb: BitBoard::ZERO,
@@ -139,7 +181,7 @@ impl ChessBoard {
     }
     
     //TODO rewrite this
-    pub fn from_fen(input: &str) -> ChessBoard {
+    pub fn from_fen(input: &str) -> ChessBoardCore {
         //ChessBoard {
         //    check_mask: self.check_mask,
         //    check_bb: self.check_bb,
@@ -149,7 +191,7 @@ impl ChessBoard {
         assert!(input.is_ascii());
         let input_vec: Vec<&str> = input.split_ascii_whitespace().collect();
         assert!(input_vec.len() == 6);
-        let mut chessboard = ChessBoard::start_pos();
+        let mut chessboard = ChessBoardCore::start_pos();
         chessboard.piece_bbs = [BitBoard::ZERO; 12];
         chessboard.mailbox = [None; 64];
         chessboard.castle_bools = [false, false, false, false];
@@ -217,7 +259,7 @@ impl ChessBoard {
 
         // parse en passant information
         if input_vec[3] != "-" {
-            chessboard.enpassant_bb.set_bit(Square::new(ChessBoard::square_index(input_vec[3]) as u8));
+            chessboard.enpassant_bb.set_bit(Square::new(ChessBoardCore::square_index(input_vec[3]) as u8));
         }
 
         //parse fifty-move-rule counter
@@ -299,8 +341,8 @@ impl ChessBoard {
         return self.side_to_move;
     }
     
-    pub const fn duplicate(&self) -> ChessBoard {
-        ChessBoard {
+    pub const fn duplicate(&self) -> ChessBoardCore {
+        ChessBoardCore {
             piece_bbs: self.piece_bbs,
             mailbox: self.mailbox,
             castle_bools: self.castle_bools,
@@ -368,7 +410,7 @@ impl ChessBoard {
 
     
     #[inline(always)]
-    pub(crate) const fn current_hash(&self) -> ZobristHash {
+    pub(crate) const fn hash(&self) -> ZobristHash {
         self.zobrist_hash
     }
 

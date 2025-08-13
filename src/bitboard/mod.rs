@@ -1,6 +1,7 @@
 use std::{fmt::Display, slice::Iter};
-pub use crate::bitboard::attack::*;
+
 use crate::square::Square;
+pub use attack::*;
 
 pub mod bit_ops;
 pub mod attack;
