@@ -21,6 +21,15 @@ pub use crate::chessmove::ChessMove;
 pub use crate::square::Square;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum GameState {
+    Ongoing,
+    Draw,
+    WhiteWins,
+    BlackWins,
+}
+
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct ChessBoard {
     core: ChessBoardCore,
     zobrist_table: ZobristTable,
@@ -58,7 +67,38 @@ impl ChessBoard {
         }
         return self.core.generate_moves();
     }
+
+    pub fn try_generate_moves(&self) -> (Vec<ChessMove>,GameState) {
+        let moves = self.generate_moves();
+        if moves.len() != 0 {
+            return (moves,GameState::Ongoing);
+        } else if self.hash_count(self.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
+            return (moves,GameState::Draw);
+        } else if self.is_king_in_check(Side::White) {
+            return (moves,GameState::BlackWins);
+        } else if self.is_king_in_check(Side::Black) {
+            return (moves,GameState::WhiteWins);
+        } else { //stalemate
+            return (moves, GameState::Draw);
+        }
+    }
     
+    //TODO calling generate_moves() here is expensive, fix
+    pub fn state(&self) -> GameState {
+        if self.generate_moves().len() != 0 {
+            return GameState::Ongoing;
+        } else if self.hash_count(self.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
+            return GameState::Draw;
+        } else if self.is_king_in_check(Side::White) {
+            return GameState::BlackWins;
+        } else if self.is_king_in_check(Side::Black) {
+            return GameState::WhiteWins;
+        } else { //stalemate
+            return GameState::Draw;
+        }
+    }
+    
+
     #[inline(always)]
     pub fn mailbox_iterator(&self) -> std::slice::Iter<'_, Option<(bitboard::Side, bitboard::PieceType)>> {
         return self.core.mailbox_iterator();
@@ -83,6 +123,7 @@ impl ChessBoard {
     pub fn is_king_in_check(&self, side:Side) -> bool {
         self.core.is_king_in_check(side)
     }
+
 }
 
 // note: castle_bools[] = [white-king  side castle,
@@ -110,7 +151,6 @@ pub struct ChessBoardCore {
     fifty_move_rule_counter: u16,
     zobrist_hash: ZobristHash,
 }
-
 
 impl Default for ChessBoardCore {
     #[inline(always)]
