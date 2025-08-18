@@ -22,10 +22,15 @@ pub use crate::square::Square;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GameState {
+    Finished(GameResult),
     Ongoing,
-    Draw,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum GameResult {
     WhiteWins,
     BlackWins,
+    Draw,
 }
 
 
@@ -73,13 +78,13 @@ impl ChessBoard {
         if moves.len() != 0 {
             return (moves,GameState::Ongoing);
         } else if self.hash_count(self.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
-            return (moves,GameState::Draw);
+            return (moves,GameState::Finished(GameResult::Draw));
         } else if self.is_king_in_check(Side::White) {
-            return (moves,GameState::BlackWins);
+            return (moves,GameState::Finished(GameResult::BlackWins));
         } else if self.is_king_in_check(Side::Black) {
-            return (moves,GameState::WhiteWins);
+            return (moves,GameState::Finished(GameResult::WhiteWins));
         } else { //stalemate
-            return (moves, GameState::Draw);
+            return (moves, GameState::Finished(GameResult::Draw));
         }
     }
     
@@ -88,13 +93,13 @@ impl ChessBoard {
         if self.generate_moves().len() != 0 {
             return GameState::Ongoing;
         } else if self.hash_count(self.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
-            return GameState::Draw;
+            return GameState::Finished(GameResult::Draw);
         } else if self.is_king_in_check(Side::White) {
-            return GameState::BlackWins;
+            return GameState::Finished(GameResult::BlackWins);
         } else if self.is_king_in_check(Side::Black) {
-            return GameState::WhiteWins;
+            return GameState::Finished(GameResult::WhiteWins);
         } else { //stalemate
-            return GameState::Draw;
+            return GameState::Finished(GameResult::Draw);
         }
     }
     
@@ -120,8 +125,8 @@ impl ChessBoard {
     }
 
     #[inline(always)]
-    pub fn is_king_in_check(&self, side:Side) -> bool {
-        self.core.is_king_in_check(side)
+    pub fn is_king_in_check(&self, king_side:Side) -> bool {
+        self.core.is_king_in_check(king_side)
     }
 
 }
