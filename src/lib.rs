@@ -19,6 +19,7 @@ use crate::{
 pub use crate::bitboard::{PieceType, Side, ChessPiece};
 pub use crate::chessmove::ChessMove;
 pub use crate::square::Square;
+pub use crate::search::Evaluator;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GameState {
@@ -48,7 +49,7 @@ impl Display for ChessBoard {
 
 impl ChessBoard {
     #[inline(always)]
-    pub fn start_pos() -> Self {
+    pub const fn start_pos() -> Self {
         return ChessBoard { core: ChessBoardCore::start_pos(), zobrist_table: ZobristTable::initial_table() };
     }
 
@@ -67,7 +68,7 @@ impl ChessBoard {
 
     #[inline(always)]
     pub fn generate_moves(&self) -> Vec<ChessMove> {
-        if self.zobrist_table.count_hash(self.core.hash()) >= 3 {
+        if self.zobrist_table.count_hash(self.core.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
             return Vec::new();
         }
         return self.core.generate_moves();
