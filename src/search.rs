@@ -19,7 +19,7 @@ impl ChessBoard {
         if let GameState::Finished(state) = self.state() {
             match state {
                 crate::GameResult::WhiteWins | crate::GameResult::BlackWins => {
-                    return (((i32::MIN + 1) / 2) - (d as i32), None); //TODO determine if +d or -d or something else should be used here.
+                    return (((i32::MIN + 1) / 2) + (d as i32), None); //TODO determine if +d or -d or something else should be used here.
                 }
                 crate::GameResult::Draw => return (0, None),
             }

@@ -193,6 +193,11 @@ impl BitBoard {
     pub(crate) const fn bit_not(&self) -> BitBoard {
         BitBoard { data: !self.data }
     }
+
+    #[inline(always)]
+    pub(crate) const fn flip(&self) -> Self {
+        BitBoard { data: self.data.swap_bytes() }
+    }
 }
 
 

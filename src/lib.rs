@@ -48,6 +48,10 @@ impl Display for ChessBoard {
 }
 
 impl ChessBoard {
+    pub const fn flip(&self) -> Self {
+        todo!()
+    }
+
     #[inline(always)]
     pub const fn start_pos() -> Self {
         return ChessBoard { core: ChessBoardCore::start_pos(), zobrist_table: ZobristTable::initial_table() };
@@ -210,6 +214,32 @@ impl Display for ChessBoardCore {
 }
 
 impl ChessBoardCore {
+    pub const fn flip(&self) -> Self {
+        let mut piece_bbs: [BitBoard; 12] = [BitBoard::ZERO; 12];
+        let mut i: usize = 0;
+        while i < 6 {
+            piece_bbs[i] = self.piece_bbs[6+i].flip();
+            piece_bbs[6+i] = self.piece_bbs[6].flip();
+            i+= 1;
+        }
+        let castle_bools: [bool; 4] = [self.castle_bools[2], self.castle_bools[3], self.castle_bools[0], self.castle_bools[1]];
+
+        ChessBoardCore {
+            piece_bbs,
+            mailbox: flip_mailbox(&self.mailbox),
+            castle_bools,
+            enpassant_bb: self.enpassant_bb.flip(),
+            check_bb: self.check_bb.flip(),
+            check_mask: self.check_mask.flip(),
+            pinned_bb: self.pinned_bb.flip(),
+            pinner_bb: self.pinned_bb.flip(),
+            side_to_move: self.side_to_move.update(),
+            full_move_counter: self.full_move_counter,
+            fifty_move_rule_counter: self.fifty_move_rule_counter,
+            zobrist_hash: ZobristHash::initial_hash(),
+        }
+    }
+
     pub const fn is_present(&self, piece_type: ChessPiece, square: Square) -> bool {
         matches!(self.mailbox[square.to_usize()], Some(piece_type))
     
@@ -733,3 +763,17 @@ impl ChessBoardCore {
     const INITIAL_ATTACKED_BB: BitBoard = BitBoard::new(0b00000000_00000000_11111111_00000000_00000000_00000000_00000000_00000000);
 }
 
+//#[rustfmt::skip]
+#[inline(always)]
+const fn flip_mailbox(input: &[Option<ChessPiece>; 64]) -> [Option<ChessPiece>; 64] {
+    [
+        input[56], input[57], input[58], input[59], input[60], input[61], input[62], input[63],
+        input[48], input[49], input[50], input[51], input[52], input[53], input[54], input[55],
+        input[40], input[41], input[42], input[43], input[44], input[45], input[46], input[47],
+        input[32], input[33], input[34], input[35], input[36], input[37], input[38], input[39],
+        input[24], input[25], input[26], input[27], input[28], input[29], input[30], input[31],
+        input[16], input[17], input[18], input[19], input[20], input[21], input[22], input[23],
+        input[08], input[09], input[10], input[11], input[12], input[13], input[14], input[15],
+        input[00], input[01], input[02], input[03], input[04], input[05], input[06], input[07],
+    ]
+}
