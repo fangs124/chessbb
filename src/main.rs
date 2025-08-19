@@ -71,12 +71,12 @@ fn main() {
 fn old_main() {
     unsafe { env::set_var("RUST_BACKTRACE", "full") };
     /* from starting pos */
-
+    let fen = "8/8/n6n/p2brkp1/7p/2p1p2N/P1P3PP/R1BQ1BKR w - - 0 1";
     let start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     //
     let datas = [];
     let moves = datas.map(|x| return ChessMove { data: x });
-    let mut chessgame = ChessBoard::from_fen(start_fen);
+    let mut chessgame = ChessBoard::from_fen(fen);
     for chessmove in moves {
         chessgame.update_state(chessmove);
     }

@@ -74,7 +74,16 @@ impl ChessBoard {
         return self.core.generate_moves();
     }
 
-    pub fn try_generate_moves(&self) -> (Vec<ChessMove>,GameState) {
+    //TODO this would introduce rand dependence
+    //#[inline(always)]
+    //pub fn random_move(&self) -> ChessMove {
+    //    if self.zobrist_table.count_hash(self.core.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
+    //        panic!("random_move error: can not generate random move!");
+    //    }
+    //    return self.core.generate_moves();
+    //}
+
+    pub fn try_generate_moves(&self) -> (Vec<ChessMove>, GameState) {
         let moves = self.generate_moves();
         if moves.len() != 0 {
             return (moves,GameState::Ongoing);
@@ -186,7 +195,7 @@ impl Display for ChessBoardCore {
                 while j < self.piece_bbs.len() {
                     let piece_bb: BitBoard = self.piece_bbs[j];
                     if !piece_bb.nth_is_zero(Square::new((64 - i) as u8 )) {
-                        s.push(UNICODE_SYM[j]);
+                        s.push(ASCII_SYM[j]);
                     }
                     j += 1;
                 }

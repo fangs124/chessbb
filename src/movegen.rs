@@ -42,10 +42,11 @@ fn calculate_attacks(cb: &ChessBoardCore, s: Square, p: PieceType) -> Vec<ChessM
     while targets.is_not_zero() {
         let target = targets.lsb_square().unwrap();
 
+        //TODO bug here
         //king: cannot move to a square under attack
         let blockers = match cb.side_to_move {
-            Side::White => cb.blockers_no_white_king(),
-            Side::Black => cb.blockers_no_black_king(),
+            Side::White => cb.blockers_no_white_king().bit_and(&BitBoard::nth(target).bit_not()),
+            Side::Black => cb.blockers_no_black_king().bit_and(&BitBoard::nth(target).bit_not()),
         };
 
         if piece_type == PieceType::King && cb.is_square_attacked(target, side.update(), blockers) {
@@ -316,7 +317,15 @@ fn calculate_pawn_moves(cb: &ChessBoardCore, s: Square) -> Vec<ChessMove> {
                     }
                 }
             }
-            moves.push(ChessMove::new(source, attack, MoveType::EnPassant));
+            //if in check, can only en-passant to remove checking pawn
+            if chessboard.check_bb.count_ones() == 1 {
+                let checker_square = chessboard.check_bb.lsb_square().unwrap();
+                if checker_square == enemy_pawn_square {
+                    moves.push(ChessMove::new(source, attack, MoveType::EnPassant));
+                    attacks.pop_bit(attack);
+                    continue;
+                }
+            }
             attacks.pop_bit(attack);
         }
     }
@@ -325,6 +334,14 @@ fn calculate_pawn_moves(cb: &ChessBoardCore, s: Square) -> Vec<ChessMove> {
 
 impl ChessBoardCore {
     pub fn update_state(&mut self, chess_move: ChessMove) {
+        //FIXME remove me
+        assert!(
+            self.piece_bb((self.side().update(), PieceType::King)).bit_and(&BitBoard::nth(chess_move.target()))
+                == BitBoard::ZERO,
+            "chessboard:\n\r{}\n\rchess_move: {:#?}\n\r",
+            self,
+            chess_move
+        );
         let mut enpassant_bb: BitBoard = BitBoard::ZERO;
         let source: Square = chess_move.source();
         let target: Square = chess_move.target();
@@ -710,14 +727,15 @@ impl ChessBoardCore {
         return moves;
     }
 
-    pub(super) const fn compute_check_bb(&mut self) {
+    //FIXME make me const, once done with the assert message debugging
+    pub(super) fn compute_check_bb(&mut self) {
         let blockers: BitBoard = self.blockers();
         let king_index: usize;
         let king_square: Square;
         match self.side_to_move {
             Side::White => {
                 king_index = 0;
-                assert!(self.piece_bbs[king_index].count_ones() == 1);
+                assert!(self.piece_bbs[king_index].count_ones() == 1, "chessboard:\n\r{}", self);
                 king_square = self.piece_bbs[king_index].lsb_square().unwrap();
 
                 let queen_bb = self.piece_bbs[07].bit_and(&get_queen_attack(king_square, blockers));
@@ -730,7 +748,7 @@ impl ChessBoardCore {
 
             Side::Black => {
                 king_index = 6;
-                assert!(self.piece_bbs[king_index].count_ones() == 1);
+                assert!(self.piece_bbs[king_index].count_ones() == 1, "chessboard:\n\r{}", self);
                 king_square = self.piece_bbs[king_index].lsb_square().unwrap();
 
                 let queen_bb = self.piece_bbs[01].bit_and(&get_queen_attack(king_square, blockers));

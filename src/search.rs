@@ -7,6 +7,11 @@ pub trait Evaluator {
 
 impl ChessBoard {
     pub fn negamax(&mut self, a: i32, b: i32, d: usize, ev: &mut impl Evaluator) -> (i32, Option<ChessMove>) {
+        let d = match self.is_king_in_check(self.side()) {
+            true => d + 1,
+            false => d,
+        };
+
         if d == 0 {
             return (ev.eval(&self), None);
         }
