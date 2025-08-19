@@ -8,7 +8,7 @@ mod search;
 mod perft;
 mod square;
 mod zobrist;
-
+mod transposition_table;
 use crate::{
     bitboard::*,
     zobrist::{ZobristHash, ZobristTable},
