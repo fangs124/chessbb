@@ -48,10 +48,6 @@ impl Display for ChessBoard {
 }
 
 impl ChessBoard {
-    pub const fn flip(&self) -> Self {
-        todo!()
-    }
-
     #[inline(always)]
     pub const fn start_pos() -> Self {
         return ChessBoard { core: ChessBoardCore::start_pos(), zobrist_table: ZobristTable::initial_table() };
@@ -222,21 +218,24 @@ impl ChessBoardCore {
             piece_bbs[6+i] = self.piece_bbs[6].flip();
             i+= 1;
         }
+        let side = self.side().update();
         let castle_bools: [bool; 4] = [self.castle_bools[2], self.castle_bools[3], self.castle_bools[0], self.castle_bools[1]];
-
+        let mailbox = flip_mailbox(&self.mailbox);
+        let enpassant_bb = self.enpassant_bb.flip();
+        let zobrist_hash = ZobristHash::compute_hash(side,mailbox, castle_bools, self.enpassant_bb );
         ChessBoardCore {
             piece_bbs,
-            mailbox: flip_mailbox(&self.mailbox),
+            mailbox,
             castle_bools,
-            enpassant_bb: self.enpassant_bb.flip(),
+            enpassant_bb,
             check_bb: self.check_bb.flip(),
             check_mask: self.check_mask.flip(),
             pinned_bb: self.pinned_bb.flip(),
             pinner_bb: self.pinned_bb.flip(),
-            side_to_move: self.side_to_move.update(),
+            side_to_move: side,
             full_move_counter: self.full_move_counter,
             fifty_move_rule_counter: self.fifty_move_rule_counter,
-            zobrist_hash: ZobristHash::initial_hash(),
+            zobrist_hash,
         }
     }
 
@@ -397,7 +396,7 @@ impl ChessBoardCore {
         chessboard.compute_pin_data();
         chessboard.compute_check_bb();
         chessboard.compute_check_mask();
-        chessboard.zobrist_hash = ZobristHash::compute_hash(&chessboard);
+        chessboard.zobrist_hash = ZobristHash::recompute_hash(&chessboard);
         return chessboard;
     }
     

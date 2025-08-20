@@ -22,6 +22,16 @@ impl Square {
     }
 
     #[inline(always)]
+    pub const fn nth(n: usize) -> Square {
+        SQUARES[n as usize]
+    }
+
+    #[inline(always)]
+    pub const fn nth_flipped(n: usize) -> Square {
+        SQUARES_FLIPPED[n as usize]
+    }
+
+    #[inline(always)]
     pub const fn to_u8(self) -> u8 {
         self.data
     }
@@ -82,7 +92,7 @@ const SQUARES_RAW_USIZE: [usize; 64] = [
 type Sq = Square;
 
 #[rustfmt::skip]
-const SQUARES: [Square; 64] = [
+pub(crate) const SQUARES: [Square; 64] = [
     Sq{data : 00}, Sq{data : 01}, Sq{data : 02}, Sq{data : 03}, Sq{data : 04}, Sq{data : 05}, Sq{data : 06}, Sq{data : 07}, //
     Sq{data : 08}, Sq{data : 09}, Sq{data : 10}, Sq{data : 11}, Sq{data : 12}, Sq{data : 13}, Sq{data : 14}, Sq{data : 15}, //
     Sq{data : 16}, Sq{data : 17}, Sq{data : 18}, Sq{data : 19}, Sq{data : 20}, Sq{data : 21}, Sq{data : 22}, Sq{data : 23}, //
@@ -91,4 +101,16 @@ const SQUARES: [Square; 64] = [
     Sq{data : 40}, Sq{data : 41}, Sq{data : 42}, Sq{data : 43}, Sq{data : 44}, Sq{data : 45}, Sq{data : 46}, Sq{data : 47}, //
     Sq{data : 48}, Sq{data : 49}, Sq{data : 50}, Sq{data : 51}, Sq{data : 52}, Sq{data : 53}, Sq{data : 54}, Sq{data : 55}, //
     Sq{data : 56}, Sq{data : 57}, Sq{data : 58}, Sq{data : 59}, Sq{data : 60}, Sq{data : 61}, Sq{data : 62}, Sq{data : 63}, //
+];
+
+#[rustfmt::skip]
+pub(crate) const SQUARES_FLIPPED: [Square; 64] = [
+    Sq{data : 56}, Sq{data : 57}, Sq{data : 58}, Sq{data : 59}, Sq{data : 60}, Sq{data : 61}, Sq{data : 62}, Sq{data : 63}, //
+    Sq{data : 48}, Sq{data : 49}, Sq{data : 50}, Sq{data : 51}, Sq{data : 52}, Sq{data : 53}, Sq{data : 54}, Sq{data : 55}, //
+    Sq{data : 40}, Sq{data : 41}, Sq{data : 42}, Sq{data : 43}, Sq{data : 44}, Sq{data : 45}, Sq{data : 46}, Sq{data : 47}, //
+    Sq{data : 32}, Sq{data : 33}, Sq{data : 34}, Sq{data : 35}, Sq{data : 36}, Sq{data : 37}, Sq{data : 38}, Sq{data : 39}, //
+    Sq{data : 24}, Sq{data : 25}, Sq{data : 26}, Sq{data : 27}, Sq{data : 28}, Sq{data : 29}, Sq{data : 30}, Sq{data : 31}, //
+    Sq{data : 16}, Sq{data : 17}, Sq{data : 18}, Sq{data : 19}, Sq{data : 20}, Sq{data : 21}, Sq{data : 22}, Sq{data : 23}, //
+    Sq{data : 08}, Sq{data : 09}, Sq{data : 10}, Sq{data : 11}, Sq{data : 12}, Sq{data : 13}, Sq{data : 14}, Sq{data : 15}, //
+    Sq{data : 00}, Sq{data : 01}, Sq{data : 02}, Sq{data : 03}, Sq{data : 04}, Sq{data : 05}, Sq{data : 06}, Sq{data : 07}, //
 ];

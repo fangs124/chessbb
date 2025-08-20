@@ -97,7 +97,44 @@ impl ZobristHash {
         return ZobristHash { value };
     }
 
-    pub(super) const fn compute_hash(chessboard: &ChessBoardCore) -> ZobristHash {
+    #[rustfmt::skip]
+    pub(super) const fn compute_hash(side: Side,mb: [Option<ChessPiece>; 64],castle: [bool; 4],enpassant: BitBoard) -> ZobristHash {
+        //side hash
+        let mut value = match side {
+            crate::bitboard::Side::White => 0u64,
+            crate::bitboard::Side::Black => SIDE_HASH[0],
+        };
+
+        //piece hash
+        let mut i: usize = 0;
+        while i < 64 {
+            if let Some(piece_data) = mb[i] {
+                value ^= PIECE_HASH[i][cp_index(piece_data)];
+            }
+            i += 1;
+        }
+
+        //castle hash
+        i = 0;
+        while i < 4 {
+            if castle[i] {
+                value ^= CASTLE_HASH[i]
+            }
+            i += 1;
+        }
+
+        //en-passant hash
+        let mut enpassant_bb = enpassant;
+        while enpassant_bb.is_not_zero() {
+            let square = enpassant_bb.lsb_square().unwrap();
+            value ^= ENPASSANT_FILE_HASH[COLS[square.to_usize()]];
+            enpassant_bb.pop_bit(square);
+        }
+
+        return ZobristHash { value };
+    }
+
+    pub(super) const fn recompute_hash(chessboard: &ChessBoardCore) -> ZobristHash {
         //side hash
         let mut value = match chessboard.side_to_move {
             crate::bitboard::Side::White => 0u64,
