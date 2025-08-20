@@ -11,15 +11,16 @@ pub struct ZobristHash {
     value: u64,
 }
 
+const DEFAULT_SIZE: usize = 1 << 12;
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct ZobristTable {
-    data: [ZobristHash; 1 << 14],
+    data: [ZobristHash; DEFAULT_SIZE],
     index: usize,
 }
 
 impl ZobristTable {
     pub const fn new(hash: ZobristHash) -> ZobristTable {
-        let mut data: [ZobristHash; 1 << 14] = [ZobristHash { value: 0 }; 1 << 14];
+        let mut data: [ZobristHash; DEFAULT_SIZE] = [ZobristHash { value: 0 }; DEFAULT_SIZE];
         data[0] = hash;
         return ZobristTable { data, index: 0 };
     }
@@ -31,7 +32,7 @@ impl ZobristTable {
 
     #[inline(always)]
     pub const fn add(&mut self, hash: ZobristHash) {
-        assert!(self.index < (1 << 14));
+        assert!(self.index < (DEFAULT_SIZE));
         self.index += 1;
         self.data[self.index] = hash;
     }
@@ -48,7 +49,10 @@ impl ZobristTable {
     }
 
     pub const fn count_hash(&self, hash: ZobristHash) -> usize {
-        let mut i: usize = 0;
+        let mut i: usize = match self.index.checked_sub(100) {
+            Some(i) => i,
+            None => 0,
+        };
         let mut count: usize = 0;
         while i <= self.index {
             if self.data[i].value == hash.value {

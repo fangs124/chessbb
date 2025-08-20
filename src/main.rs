@@ -80,7 +80,7 @@ fn old_main() {
     for chessmove in moves {
         chessgame.update_state(chessmove);
     }
-    let mut moves = chessgame.generate_moves();
+    let (mut moves, _) = chessgame.try_generate_moves();
     moves.sort();
 
     //old test
@@ -217,7 +217,7 @@ fn old_main() {
         let now = Instant::now();
         let total = chessgame.perft_count(depth);
         let elapsed = now.elapsed();
-        let mut moves = chessgame.generate_moves();
+        let (mut moves, _) = chessgame.try_generate_moves();
         moves.sort();
         let mut result_str_vec = Vec::<String>::new();
 

@@ -19,7 +19,7 @@ use crate::{
 pub use crate::bitboard::{PieceType, Side, ChessPiece};
 pub use crate::chessmove::ChessMove;
 pub use crate::square::Square;
-pub use crate::search::Evaluator;
+pub use crate::search::{Evaluator, MATERIAL_EVAL};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GameState {
@@ -47,6 +47,11 @@ impl Display for ChessBoard {
     }
 }
 
+pub struct ChessBoardSnapshot {
+    core: ChessBoardCore,
+    hash: ZobristHash,
+}
+
 impl ChessBoard {
     #[inline(always)]
     pub const fn start_pos() -> Self {
@@ -61,18 +66,31 @@ impl ChessBoard {
     }
 
     #[inline(always)]
-    pub fn update_state(&mut self, chessmove: ChessMove) {
-        self.core.update_state(chessmove);
+    pub fn update_state(&mut self, chess_move: ChessMove) {
+        self.core.update_state(chess_move);
         self.zobrist_table.add(self.core.hash());
     }
 
     #[inline(always)]
-    pub fn generate_moves(&self) -> Vec<ChessMove> {
-        if self.zobrist_table.count_hash(self.core.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
-            return Vec::new();
-        }
-        return self.core.generate_moves();
+    pub fn explore_state(&mut self, chess_move: ChessMove) -> ChessBoardSnapshot {
+        let core = self.core;
+        self.update_state(chess_move);
+        return ChessBoardSnapshot{core, hash: self.core.hash() };
     }
+
+    #[inline(always)]
+    pub fn restore_state(&mut self, snapshot: ChessBoardSnapshot) {
+        self.core = snapshot.core;
+        self.zobrist_table.remove_last(snapshot.hash);
+    }
+
+    //#[inline(always)]
+    //fn generate_moves(&self) -> Vec<ChessMove> {
+    //    if self.zobrist_table.count_hash(self.core.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
+    //        return Vec::new();
+    //    }
+    //    return self.core.generate_moves();
+    //}
 
     //TODO this would introduce rand dependence
     //#[inline(always)]
@@ -84,11 +102,12 @@ impl ChessBoard {
     //}
 
     pub fn try_generate_moves(&self) -> (Vec<ChessMove>, GameState) {
-        let moves = self.generate_moves();
+        if self.zobrist_table.count_hash(self.core.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
+            return (Vec::new(), GameState::Finished(GameResult::Draw))
+        }
+        let moves = self.core.generate_moves();
         if moves.len() != 0 {
             return (moves,GameState::Ongoing);
-        } else if self.hash_count(self.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
-            return (moves,GameState::Finished(GameResult::Draw));
         } else if self.is_king_in_check(Side::White) {
             return (moves,GameState::Finished(GameResult::BlackWins));
         } else if self.is_king_in_check(Side::Black) {
@@ -99,19 +118,19 @@ impl ChessBoard {
     }
     
     //TODO calling generate_moves() here is expensive, fix
-    pub fn state(&self) -> GameState {
-        if self.generate_moves().len() != 0 {
-            return GameState::Ongoing;
-        } else if self.hash_count(self.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
-            return GameState::Finished(GameResult::Draw);
-        } else if self.is_king_in_check(Side::White) {
-            return GameState::Finished(GameResult::BlackWins);
-        } else if self.is_king_in_check(Side::Black) {
-            return GameState::Finished(GameResult::WhiteWins);
-        } else { //stalemate
-            return GameState::Finished(GameResult::Draw);
-        }
-    }
+    //pub fn state(&self) -> GameState {
+    //    if self.generate_moves().len() != 0 {
+    //        return GameState::Ongoing;
+    //    } else if self.hash_count(self.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
+    //        return GameState::Finished(GameResult::Draw);
+    //    } else if self.is_king_in_check(Side::White) {
+    //        return GameState::Finished(GameResult::BlackWins);
+    //    } else if self.is_king_in_check(Side::Black) {
+    //        return GameState::Finished(GameResult::WhiteWins);
+    //    } else { //stalemate
+    //        return GameState::Finished(GameResult::Draw);
+    //    }
+    //}
     
 
     #[inline(always)]
@@ -554,7 +573,7 @@ impl ChessBoardCore {
             None => panic!("king_is_in_check error: king not found!"),
         };
 
-        return self.is_square_attacked(square, self.side_to_move.update(), self.blockers())
+        return self.is_square_attacked(square, king_side.update(), self.blockers())
     }
 
     // castling kingside

@@ -54,7 +54,7 @@ impl ChessBoard {
             return 1;
         }
 
-        let moves = self.generate_moves();
+        let moves = self.try_generate_moves().0;
         if depth == 1 {
             return moves.len() as u64;
         }
