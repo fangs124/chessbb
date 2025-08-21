@@ -1,4 +1,4 @@
-pub(crate) const ROOK: [[BitBoard; 1 << 12]; 64] = [
+pub(crate) static ROOK: [[BitBoard; 1 << 12]; 64] = [
     [
         BitBoard {
             data: 72340172838076926,

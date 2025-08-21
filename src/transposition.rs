@@ -18,13 +18,13 @@ pub struct NodeData {
 
 impl Default for NodeData {
     fn default() -> Self {
-        return Self { key: ZobristHash::ZERO, depth: 0, eval: 0, ty: None, best: None };
+        Self { key: ZobristHash::ZERO, depth: 0, eval: 0, ty: None, best: None }
     }
 }
 
 impl Default for TranspositionTable {
     fn default() -> Self {
-        return Self::new();
+        Self::new()
     }
 }
 
@@ -47,7 +47,7 @@ const DEFAULT_SIZE: usize = 1 << 24;
 impl TranspositionTable {
     #[inline(always)]
     pub fn new() -> Self {
-        return TranspositionTable { data: Box::new([NodeData::const_default(); DEFAULT_SIZE]) };
+        TranspositionTable { data: Box::new([NodeData::const_default(); DEFAULT_SIZE]) }
     }
 
     //TODO need to think of replacement policy. right now it uses the naive always replace
@@ -89,52 +89,52 @@ impl TranspositionTable {
 impl NodeData {
     #[inline(always)]
     fn new(key: ZobristHash, depth: u16, eval: i16, ty: Option<NodeType>, best: Option<ChessMove>) -> Self {
-        return Self { key, depth, eval: eval, ty, best };
+        Self { key, depth, eval, ty, best }
     }
 
     #[inline(always)]
     const fn const_default() -> Self {
-        return Self { key: ZobristHash::ZERO, depth: 0, eval: 0, ty: None, best: None };
+        Self { key: ZobristHash::ZERO, depth: 0, eval: 0, ty: None, best: None }
     }
 
     #[inline(always)]
     pub const fn is_valid(&self) -> bool {
-        return !matches!(self.ty, None);
+        self.ty.is_some()
     }
 
     #[inline(always)]
     pub const fn depth(&self) -> u16 {
-        return self.depth;
+        self.depth
     }
 
     #[inline(always)]
     pub const fn eval(&self) -> i16 {
-        return self.eval;
+        self.eval
     }
 
     #[inline(always)]
     pub const fn ty(&self) -> Option<NodeType> {
-        return self.ty;
+        self.ty
     }
 
     #[inline(always)]
     pub const fn best(&self) -> Option<ChessMove> {
-        return self.best;
+        self.best
     }
 
     #[inline(always)]
     pub const fn pair(&self) -> (i16, Option<ChessMove>) {
-        return (self.eval, self.best);
+        (self.eval, self.best)
     }
 
     #[inline(always)]
     pub const fn value_type(value: i16, a: i16, b: i16) -> NodeType {
         if value <= a {
-            return NodeType::Beta;
+            NodeType::Beta
         } else if b <= value {
-            return NodeType::Alpha;
+            NodeType::Alpha
         } else {
-            return NodeType::Exact;
+            NodeType::Exact
         }
     }
 }
@@ -144,7 +144,7 @@ impl Index<ZobristHash> for [NodeData] {
 
     #[inline(always)]
     fn index(&self, index: ZobristHash) -> &Self::Output {
-        return &self[index.to_index() % self.len()];
+        &self[index.to_index() % self.len()]
     }
 }
 
@@ -153,20 +153,20 @@ impl Index<&ZobristHash> for [NodeData] {
 
     #[inline(always)]
     fn index(&self, index: &ZobristHash) -> &Self::Output {
-        return &self[index.to_index() % self.len()];
+        &self[index.to_index() % self.len()]
     }
 }
 
 impl IndexMut<ZobristHash> for [NodeData] {
     #[inline(always)]
     fn index_mut(&mut self, index: ZobristHash) -> &mut Self::Output {
-        return &mut self[index.to_index() % self.len()];
+        &mut self[index.to_index() % self.len()]
     }
 }
 
 impl IndexMut<&ZobristHash> for [NodeData] {
     #[inline(always)]
     fn index_mut(&mut self, index: &ZobristHash) -> &mut Self::Output {
-        return &mut self[index.to_index() % self.len()];
+        &mut self[index.to_index() % self.len()]
     }
 }

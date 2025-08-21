@@ -27,7 +27,7 @@ impl Side {
     const SIDES: [Side; 2] = [Side::White, Side::Black];
 
     pub fn iterator() -> Iter<'static, Side> {
-        return Side::SIDES.iter();
+        Side::SIDES.iter()
     }
 }
 
@@ -147,9 +147,9 @@ impl BitBoard {
     #[inline(always)]
     pub(crate) const fn lsb_index(&self) -> Option<usize> {
         if self.data == 0u64 {
-            return None;
+            None
         } else {
-            return Some(self.data.trailing_zeros() as usize);
+            Some(self.data.trailing_zeros() as usize)
         }
     }
 
@@ -157,9 +157,9 @@ impl BitBoard {
     #[inline(always)]
     pub(crate) const fn lsb_square(&self) -> Option<Square> {
         if self.data == 0u64 {
-            return None;
+            None
         } else {
-            return Some(Square::new(self.data.trailing_zeros() as u8));
+            Some(Square::new(self.data.trailing_zeros() as u8))
         }
     }
 
@@ -201,7 +201,7 @@ impl BitBoard {
 }
 
 
-pub(crate) const RAYS: [[BitBoard; 64]; 64] = rays();
+pub(crate) static RAYS: [[BitBoard; 64]; 64] = rays();
 
 const fn rays() -> [[BitBoard; 64]; 64] {
     let mut rays: [[BitBoard; 64]; 64] = [[BitBoard::ZERO; 64]; 64];

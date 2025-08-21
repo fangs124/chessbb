@@ -22,7 +22,7 @@ impl ZobristTable {
     pub const fn new(hash: ZobristHash) -> ZobristTable {
         let mut data: [ZobristHash; DEFAULT_SIZE] = [ZobristHash { value: 0 }; DEFAULT_SIZE];
         data[0] = hash;
-        return ZobristTable { data, index: 0 };
+        ZobristTable { data, index: 0 }
     }
 
     #[inline(always)]
@@ -60,7 +60,7 @@ impl ZobristTable {
             }
             i += 1
         }
-        return count;
+        count
     }
 }
 
@@ -74,7 +74,7 @@ impl ZobristHash {
 
     #[inline(always)]
     pub const fn to_index(&self) -> usize {
-        return self.value as usize;
+        self.value as usize
     }
     pub(super) const fn initial_hash() -> ZobristHash {
         let mut value: u64 = 0;
@@ -98,7 +98,7 @@ impl ZobristHash {
             i += 1;
         }
 
-        return ZobristHash { value };
+        ZobristHash { value }
     }
 
     #[rustfmt::skip]
@@ -135,7 +135,7 @@ impl ZobristHash {
             enpassant_bb.pop_bit(square);
         }
 
-        return ZobristHash { value };
+        ZobristHash { value }
     }
 
     pub(super) const fn recompute_hash(chessboard: &ChessBoardCore) -> ZobristHash {
@@ -171,7 +171,7 @@ impl ZobristHash {
             enpassant_bb.pop_bit(square);
         }
 
-        return ZobristHash { value };
+        ZobristHash { value }
     }
 
     pub(super) const fn compute_castle_hash(chessboard: &ChessBoardCore) -> ZobristHash {
@@ -184,7 +184,7 @@ impl ZobristHash {
             }
             i += 1;
         }
-        return ZobristHash { value };
+        ZobristHash { value }
     }
 
     pub(super) const fn compute_enpassant_hash(enpassant_bb: BitBoard) -> ZobristHash {
@@ -195,7 +195,7 @@ impl ZobristHash {
             value ^= ENPASSANT_FILE_HASH[COLS[square.to_usize()]];
             enpassant_bb.pop_bit(square);
         }
-        return ZobristHash { value };
+        ZobristHash { value }
     }
 
     //const fn update_hash(&self, s: Square, t: Square, s_p: ChessPiece, t_p: Option<ChessPiece>) -> ZorbistHash {

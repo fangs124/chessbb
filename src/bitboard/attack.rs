@@ -59,7 +59,7 @@ pub const fn get_bishop_attack(square: Square, blockers: BitBoard) -> BitBoard {
         blockers.bit_and(&BISHOP_MBB_MASK[square.to_usize()]),
         BISHOP_OCC_BITCOUNT[square.to_usize()],
     );
-    return BISHOP_ATTACKS_MBB[square.to_usize()][m];
+    BISHOP_ATTACKS_MBB[square.to_usize()][m]
 }
 
 #[inline(always)]
@@ -69,7 +69,7 @@ pub const fn get_rook_attack(square: Square, blockers: BitBoard) -> BitBoard {
         blockers.bit_and(&ROOK_MBB_MASK[square.to_usize()]),
         ROOK_OCC_BITCOUNT[square.to_usize()],
     );
-    return ROOK_ATTACKS_MBB[square.to_usize()][m];
+    ROOK_ATTACKS_MBB[square.to_usize()][m]
 }
 
 #[inline(always)]

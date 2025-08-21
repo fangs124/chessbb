@@ -26,7 +26,7 @@ impl ChessBoardCore {
             total += new_chessboard.perft_count(zobrist_table, depth - 1);
             zobrist_table.remove_last(current_hash);
         }
-        return total;
+        total
     }
 }
 
@@ -34,14 +34,14 @@ impl ChessBoardCore {
 impl ChessMove {
     pub fn print_move(&self) -> String {
         if let MoveType::Promotion(piece) = self.move_type() {
-            return format!(
+            format!(
                 "{}{}{}",
                 SQUARE_SYM[self.source().to_usize()],
                 SQUARE_SYM[self.target().to_usize()],
                 piece.to_uci_char()
-            );
+            )
         } else {
-            return format!("{}{}", SQUARE_SYM[self.source().to_usize()], SQUARE_SYM[self.target().to_usize()]);
+            format!("{}{}", SQUARE_SYM[self.source().to_usize()], SQUARE_SYM[self.target().to_usize()])
         }
     }
 }
@@ -60,6 +60,6 @@ impl ChessBoard {
         }
         let mut total: u64 = 0;
         total += self.core.perft_count(&mut self.zt, depth);
-        return total;
+        total
     }
 }
