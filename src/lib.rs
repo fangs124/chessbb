@@ -8,7 +8,7 @@ mod search;
 mod perft;
 mod square;
 mod zobrist;
-mod transposition_table;
+mod transposition;
 use crate::{
     bitboard::*,
     zobrist::{ZobristHash, ZobristTable},
@@ -20,7 +20,7 @@ pub use crate::bitboard::{PieceType, Side, ChessPiece};
 pub use crate::chessmove::ChessMove;
 pub use crate::square::Square;
 pub use crate::search::{Evaluator, MATERIAL_EVAL};
-
+pub use crate::transposition::{TranspositionTable, NodeData};
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GameState {
     Finished(GameResult),
@@ -35,10 +35,11 @@ pub enum GameResult {
 }
 
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct ChessBoard {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChessBoard{
     core: ChessBoardCore,
-    zobrist_table: ZobristTable,
+    zt: ZobristTable,
+    tt: TranspositionTable,
 }
 
 impl Display for ChessBoard {
@@ -54,21 +55,21 @@ pub struct ChessBoardSnapshot {
 
 impl ChessBoard {
     #[inline(always)]
-    pub const fn start_pos() -> Self {
-        return ChessBoard { core: ChessBoardCore::start_pos(), zobrist_table: ZobristTable::initial_table() };
+    pub fn start_pos() -> Self {
+        return ChessBoard { core: ChessBoardCore::start_pos(), zt: ZobristTable::initial_table(), tt: TranspositionTable::new()};
     }
 
     #[inline(always)]
     pub fn from_fen(input: &str) -> ChessBoard {
         let chessboard = ChessBoardCore::from_fen(input);
         let zobrist_table = ZobristTable::new(chessboard.hash());
-        return ChessBoard { core: chessboard, zobrist_table };
+        return ChessBoard { core: chessboard, zt: zobrist_table, tt: TranspositionTable::new() };
     }
 
     #[inline(always)]
     pub fn update_state(&mut self, chess_move: ChessMove) {
         self.core.update_state(chess_move);
-        self.zobrist_table.add(self.core.hash());
+        self.zt.add(self.core.hash());
     }
 
     #[inline(always)]
@@ -81,7 +82,7 @@ impl ChessBoard {
     #[inline(always)]
     pub fn restore_state(&mut self, snapshot: ChessBoardSnapshot) {
         self.core = snapshot.core;
-        self.zobrist_table.remove_last(snapshot.hash);
+        self.zt.remove_last(snapshot.hash);
     }
 
     //#[inline(always)]
@@ -102,7 +103,7 @@ impl ChessBoard {
     //}
 
     pub fn try_generate_moves(&self) -> (Vec<ChessMove>, GameState) {
-        if self.zobrist_table.count_hash(self.core.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
+        if self.zt.count_hash(self.core.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
             return (Vec::new(), GameState::Finished(GameResult::Draw))
         }
         let moves = self.core.generate_moves();
@@ -145,7 +146,7 @@ impl ChessBoard {
 
     #[inline(always)]
     pub fn hash_count(&self, hash: ZobristHash) -> usize {
-        self.zobrist_table.count_hash(hash)
+        self.zt.count_hash(hash)
     }
 
     #[inline(always)]
@@ -156,6 +157,16 @@ impl ChessBoard {
     #[inline(always)]
     pub fn is_king_in_check(&self, king_side:Side) -> bool {
         self.core.is_king_in_check(king_side)
+    }
+
+    #[inline(always)]
+    pub fn look_up_tt(&self) -> NodeData {
+        self.tt.look_up(&self.hash())
+    }
+
+    #[inline(always)]
+    pub fn update_tt(&mut self, value: i16, chess_move:Option<ChessMove>, a: i16, b:i16, d:u16) {
+        self.tt.store(self.hash(), d, value, Some(NodeData::value_type(value, a, b)), chess_move);
     }
 
 }

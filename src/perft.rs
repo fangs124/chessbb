@@ -59,7 +59,7 @@ impl ChessBoard {
             return moves.len() as u64;
         }
         let mut total: u64 = 0;
-        total += self.core.perft_count(&mut self.zobrist_table, depth);
+        total += self.core.perft_count(&mut self.zt, depth);
         return total;
     }
 }
