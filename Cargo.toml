@@ -13,11 +13,7 @@ debug = 1
 
 
 [lints.clippy]
-needless_return = "allow"
-implicit_return = "allow"
 zero_prefixed_literal = "allow"
 bool_comparison = "allow"
-large_const_arrays = "allow"
 match_like_matches_macro = "allow"
 collapsible_if = "allow"
-
