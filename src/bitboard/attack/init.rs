@@ -30,7 +30,7 @@ pub(super) const fn init_pawn_attack(side: Side) -> [BitBoard; 64] {
         attack_array[i] = BitBoard { data };
         i += 1;
     }
-    attack_array
+    return attack_array;
 }
 
 pub(super) const fn init_knight_attack() -> [BitBoard; 64] {
@@ -81,7 +81,7 @@ pub(super) const fn init_knight_attack() -> [BitBoard; 64] {
         attack_array[i] = BitBoard { data };
         i += 1;
     }
-    attack_array
+    return attack_array;
 }
 
 pub(super) const fn init_king_attack() -> [BitBoard; 64] {
@@ -124,7 +124,7 @@ pub(super) const fn init_king_attack() -> [BitBoard; 64] {
         attack_array[i] = BitBoard { data };
         i += 1;
     }
-    attack_array
+    return attack_array;
 }
 
 pub(super) const fn naive_bishop_attack(i: usize, blockers: BitBoard) -> BitBoard {

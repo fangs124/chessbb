@@ -44,7 +44,7 @@ pub struct ChessBoard{
 
 impl Display for ChessBoard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.core.fmt(f)
+        return self.core.fmt(f);
     }
 }
 
@@ -56,14 +56,14 @@ pub struct ChessBoardSnapshot {
 impl ChessBoard {
     #[inline(always)]
     pub fn start_pos() -> Self {
-        ChessBoard { core: ChessBoardCore::start_pos(), zt: ZobristTable::initial_table(), tt: TranspositionTable::new()}
+        return ChessBoard { core: ChessBoardCore::start_pos(), zt: ZobristTable::initial_table(), tt: TranspositionTable::new()};
     }
 
     #[inline(always)]
     pub fn from_fen(input: &str) -> ChessBoard {
         let chessboard = ChessBoardCore::from_fen(input);
         let zobrist_table = ZobristTable::new(chessboard.hash());
-        ChessBoard { core: chessboard, zt: zobrist_table, tt: TranspositionTable::new() }
+        return ChessBoard { core: chessboard, zt: zobrist_table, tt: TranspositionTable::new() };
     }
 
     #[inline(always)]
@@ -76,7 +76,7 @@ impl ChessBoard {
     pub fn explore_state(&mut self, chess_move: ChessMove) -> ChessBoardSnapshot {
         let core = self.core;
         self.update_state(chess_move);
-        ChessBoardSnapshot{core, hash: self.core.hash() }
+        return ChessBoardSnapshot{core, hash: self.core.hash() };
     }
 
     #[inline(always)]
@@ -107,14 +107,14 @@ impl ChessBoard {
             return (Vec::new(), GameState::Finished(GameResult::Draw))
         }
         let moves = self.core.generate_moves();
-        if !moves.is_empty() {
-            (moves,GameState::Ongoing)
+        if moves.len() != 0 {
+            return (moves,GameState::Ongoing);
         } else if self.is_king_in_check(Side::White) {
-            (moves,GameState::Finished(GameResult::BlackWins))
+            return (moves,GameState::Finished(GameResult::BlackWins));
         } else if self.is_king_in_check(Side::Black) {
-            (moves,GameState::Finished(GameResult::WhiteWins))
+            return (moves,GameState::Finished(GameResult::WhiteWins));
         } else { //stalemate
-            (moves, GameState::Finished(GameResult::Draw))
+            return (moves, GameState::Finished(GameResult::Draw));
         }
     }
     
@@ -136,7 +136,7 @@ impl ChessBoard {
 
     #[inline(always)]
     pub fn mailbox_iterator(&self) -> std::slice::Iter<'_, Option<(bitboard::Side, bitboard::PieceType)>> {
-        self.core.mailbox_iterator()
+        return self.core.mailbox_iterator();
     }
 
     #[inline(always)]
@@ -235,7 +235,7 @@ impl Display for ChessBoardCore {
                 s.push('\n');
             }
         }
-        write!(f, "{s}")
+        return write!(f, "{s}")
     }
 }
 
@@ -393,15 +393,15 @@ impl ChessBoardCore {
                     let king_pos= chessboard.piece_bbs[0].lsb_square().unwrap();
                     let mut check_bitboard = BitBoard::ZERO;
                     //q
-                    check_bitboard |= chessboard.piece_bbs[07] & get_queen_attack(king_pos, blockers);
+                    check_bitboard |= (chessboard.piece_bbs[07] & get_queen_attack(king_pos, blockers));
                     //n
-                    check_bitboard |= chessboard.piece_bbs[08] & get_knight_attack(king_pos);
+                    check_bitboard |= (chessboard.piece_bbs[08] & get_knight_attack(king_pos));
                     //b
-                    check_bitboard |= chessboard.piece_bbs[09] & get_bishop_attack(king_pos, blockers);
+                    check_bitboard |= (chessboard.piece_bbs[09] & get_bishop_attack(king_pos, blockers));
                     //r
-                    check_bitboard |= chessboard.piece_bbs[10] & get_rook_attack(king_pos, blockers);
+                    check_bitboard |= (chessboard.piece_bbs[10] & get_rook_attack(king_pos, blockers));
                     //p
-                    check_bitboard |= chessboard.piece_bbs[11] & get_w_pawn_attack(king_pos);
+                    check_bitboard |= (chessboard.piece_bbs[11] & get_w_pawn_attack(king_pos));
                     chessboard.check_bb = check_bitboard;
                 }
 
@@ -410,15 +410,15 @@ impl ChessBoardCore {
                     let king_pos = chessboard.piece_bbs[6].lsb_square().unwrap();
                     let mut check_bitboard = BitBoard::ZERO;
                     //Q
-                    check_bitboard |= chessboard.piece_bbs[01] & get_queen_attack(king_pos, blockers);
+                    check_bitboard |= (chessboard.piece_bbs[01] & get_queen_attack(king_pos, blockers));
                     //N
-                    check_bitboard |= chessboard.piece_bbs[02] & get_knight_attack(king_pos);
+                    check_bitboard |= (chessboard.piece_bbs[02] & get_knight_attack(king_pos));
                     //B
-                    check_bitboard |= chessboard.piece_bbs[03] & get_bishop_attack(king_pos, blockers);
+                    check_bitboard |= (chessboard.piece_bbs[03] & get_bishop_attack(king_pos, blockers));
                     //R
-                    check_bitboard |= chessboard.piece_bbs[04] & get_rook_attack(king_pos, blockers);
+                    check_bitboard |= (chessboard.piece_bbs[04] & get_rook_attack(king_pos, blockers));
                     //P
-                    check_bitboard |= chessboard.piece_bbs[05] & get_b_pawn_attack(king_pos);
+                    check_bitboard |= (chessboard.piece_bbs[05] & get_b_pawn_attack(king_pos));
                     chessboard.check_bb = check_bitboard;
                 }
             }
@@ -427,7 +427,7 @@ impl ChessBoardCore {
         chessboard.compute_check_bb();
         chessboard.compute_check_mask();
         chessboard.zobrist_hash = ZobristHash::recompute_hash(&chessboard);
-        chessboard
+        return chessboard;
     }
     
     //TODO rewrite this
@@ -452,7 +452,7 @@ impl ChessBoardCore {
 
     #[inline(always)]
     pub const fn side(&self) -> Side {
-        self.side_to_move
+        return self.side_to_move;
     }
     
     pub const fn duplicate(&self) -> ChessBoardCore {
@@ -479,7 +479,7 @@ impl ChessBoardCore {
             bitboard = bitboard.bit_or(&self.piece_bbs[i]);
             i += 1;
         }
-        bitboard
+        return bitboard;
     }
 
     pub const fn blockers_no_white_king(&self) -> BitBoard {
@@ -489,7 +489,7 @@ impl ChessBoardCore {
             bitboard = bitboard.bit_or(&self.piece_bbs[i]);
             i += 1;
         }
-        bitboard.bit_and(&self.piece_bbs[0].bit_not())
+        return bitboard.bit_and(&self.piece_bbs[0].bit_not());
     }
 
     pub const fn blockers_no_black_king(&self) -> BitBoard {
@@ -499,7 +499,7 @@ impl ChessBoardCore {
             bitboard = bitboard.bit_or(&self.piece_bbs[i]);
             i += 1;
         }
-        bitboard.bit_and(&self.piece_bbs[6].bit_not())
+        return bitboard.bit_and(&self.piece_bbs[6].bit_not());
     }
 
     pub const fn white_blockers(&self) -> BitBoard {
@@ -509,7 +509,7 @@ impl ChessBoardCore {
             bitboard = bitboard.bit_or(&self.piece_bbs[i]);
             i += 1;
         }
-        bitboard
+        return bitboard;
     }
     
     pub const fn black_blockers(&self) -> BitBoard {
@@ -519,7 +519,7 @@ impl ChessBoardCore {
             bitboard = bitboard.bit_or(&self.piece_bbs[i]);
             i += 1;
         }
-        bitboard
+        return bitboard;
     }
 
     
@@ -532,20 +532,20 @@ impl ChessBoardCore {
     pub const fn is_square_attacked(&self, square: Square, attacker_side: Side, blockers: BitBoard) -> bool {
         match attacker_side {
             Side::White => {
-                (get_b_pawn_attack(square).bit_and(&self.piece_bbs[5])).is_not_zero()
+                return (get_b_pawn_attack(square).bit_and(&self.piece_bbs[5])).is_not_zero()
                     || (get_rook_attack(square, blockers).bit_and(&self.piece_bbs[4])).is_not_zero()
                     || (get_bishop_attack(square, blockers).bit_and(&self.piece_bbs[3])).is_not_zero()
                     || (get_knight_attack(square).bit_and(&self.piece_bbs[2])).is_not_zero()
                     || (get_queen_attack(square, blockers).bit_and(&self.piece_bbs[1])).is_not_zero()
-                    || (get_king_attack(square).bit_and(&self.piece_bbs[0])).is_not_zero()
+                    || (get_king_attack(square).bit_and(&self.piece_bbs[0])).is_not_zero();
             }
             Side::Black => {
-                (get_w_pawn_attack(square).bit_and(&self.piece_bbs[11])).is_not_zero()
+                return (get_w_pawn_attack(square).bit_and(&self.piece_bbs[11])).is_not_zero()
                     || (get_rook_attack(square, blockers).bit_and(&self.piece_bbs[10])).is_not_zero()
                     || (get_bishop_attack(square, blockers).bit_and(&self.piece_bbs[9])).is_not_zero()
                     || (get_knight_attack(square).bit_and(&self.piece_bbs[8])).is_not_zero()
                     || (get_queen_attack(square, blockers).bit_and(&self.piece_bbs[7])).is_not_zero()
-                    || (get_king_attack(square).bit_and(&self.piece_bbs[6])).is_not_zero()
+                    || (get_king_attack(square).bit_and(&self.piece_bbs[6])).is_not_zero();
             }
         }
     }
@@ -584,7 +584,7 @@ impl ChessBoardCore {
             None => panic!("king_is_in_check error: king not found!"),
         };
 
-        self.is_square_attacked(square, king_side.update(), self.blockers())
+        return self.is_square_attacked(square, king_side.update(), self.blockers())
     }
 
     // castling kingside
@@ -642,7 +642,7 @@ impl ChessBoardCore {
             }
             squares.pop_bit(square);
         }
-        true
+        return true;
     }
     
     // castling queenside
@@ -700,7 +700,7 @@ impl ChessBoardCore {
             }
             squares.pop_bit(square);
         }
-        true
+        return true;
     }
     
     #[inline(always)]
@@ -720,7 +720,7 @@ impl ChessBoardCore {
             }
             pinners.pop_bit(pinner);
         }
-        pin_mask
+        return pin_mask;
     } 
     
     #[inline(always)]

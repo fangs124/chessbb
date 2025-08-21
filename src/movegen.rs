@@ -72,7 +72,7 @@ fn calculate_attacks(cb: &ChessBoardCore, s: Square, p: PieceType) -> Vec<ChessM
         moves.push(ChessMove::new(source, target, MoveType::Normal));
         targets.pop_bit(target);
     }
-    moves
+    return moves;
 }
 
 fn calculate_pawn_moves(cb: &ChessBoardCore, s: Square) -> Vec<ChessMove> {
@@ -329,7 +329,7 @@ fn calculate_pawn_moves(cb: &ChessBoardCore, s: Square) -> Vec<ChessMove> {
             attacks.pop_bit(attack);
         }
     }
-    moves
+    return moves;
 }
 
 impl ChessBoardCore {
@@ -724,7 +724,7 @@ impl ChessBoardCore {
                 sources.pop_bit(source);
             }
         }
-        moves
+        return moves;
     }
 
     //FIXME make me const, once done with the assert message debugging

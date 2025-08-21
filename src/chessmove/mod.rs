@@ -167,12 +167,12 @@ impl ChessMove {
     }
 
     pub(crate) const fn promotions(source: Square, target: Square) -> [ChessMove; 4] {
-        [
+        return [
             ChessMove::new(source, target, MoveType::Promotion(PieceType::Queen)),
             ChessMove::new(source, target, MoveType::Promotion(PieceType::Knight)),
             ChessMove::new(source, target, MoveType::Promotion(PieceType::Bishop)),
             ChessMove::new(source, target, MoveType::Promotion(PieceType::Rook)),
-        ]
+        ];
     }
 
     pub(crate) const W_KINGSIDE_CASTLE: ChessMove = ChessMove::new(

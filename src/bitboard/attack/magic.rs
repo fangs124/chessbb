@@ -6,8 +6,8 @@ pub(super) const SIZE_ROOK: usize = 1 << 12; //size of the index for rook magic 
 
 pub(super) const BISHOP_MBB_MASK: [BitBoard; 64] = bishop_mbb_mask();
 pub(super) const ROOK_MBB_MASK: [BitBoard; 64] = rook_mbb_mask();
-pub(super) static BISHOP_ATTACKS_MBB: [[BitBoard; SIZE_BISHOP]; 64] = BISHOP;
-pub(super) static ROOK_ATTACKS_MBB: [[BitBoard; SIZE_ROOK]; 64] = ROOK;
+pub(super) const BISHOP_ATTACKS_MBB: [[BitBoard; SIZE_BISHOP]; 64] = BISHOP;
+pub(super) const ROOK_ATTACKS_MBB: [[BitBoard; SIZE_ROOK]; 64] = ROOK;
 
 include!("data/bishop.rs");
 include!("data/rook.rs");
@@ -91,7 +91,7 @@ const fn compute_occ_bb(index: usize, mask_bitcount: usize, attack_mask: BitBoar
         }
         i += 1;
     }
-    occupancy_bb
+    return occupancy_bb;
 }
 
 // each bitboard flags relevant squares to a bishop in any given location on the chessboard
@@ -126,7 +126,7 @@ const fn bishop_mbb_mask() -> [BitBoard; 64] {
         attack_array[i] = BitBoard { data };
         i += 1;
     }
-    attack_array
+    return attack_array;
 }
 
 // each bitboard flags relevant squares to a rook in any given location on the chessboard
@@ -161,7 +161,7 @@ const fn rook_mbb_mask() -> [BitBoard; 64] {
         attack_array[i] = BitBoard { data };
         i += 1;
     }
-    attack_array
+    return attack_array;
 }
 
 const fn bishop_attack_mbb() -> [[BitBoard; SIZE_BISHOP]; 64] {
@@ -188,7 +188,7 @@ const fn bishop_attack_mbb() -> [[BitBoard; SIZE_BISHOP]; 64] {
         }
         i += 1;
     }
-    attacks
+    return attacks;
 }
 
 const fn rook_attack_mbb() -> [[BitBoard; SIZE_ROOK]; 64] {
@@ -215,7 +215,7 @@ const fn rook_attack_mbb() -> [[BitBoard; SIZE_ROOK]; 64] {
         }
         i += 1;
     }
-    attacks
+    return attacks;
 }
 
 #[inline(always)]

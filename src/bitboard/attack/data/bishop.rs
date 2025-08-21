@@ -1,4 +1,4 @@
-pub(crate) static BISHOP: [[BitBoard; 1 << 9]; 64] = [
+pub(crate) const BISHOP: [[BitBoard; 1 << 9]; 64] = [
     [
         BitBoard { data: 9241421688590303744 },
         BitBoard { data: 68853957120 },

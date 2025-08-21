@@ -1,6 +1,10 @@
 //use chessbb::chessmove::*;
 use chessbb::*;
+use core::error;
 //use chessbb::chessmove::ChessMove;
+use std::fs::File;
+use std::io::prelude::*;
+use std::path::Path;
 use std::{env, time::Instant};
 
 extern crate chessbb;
@@ -71,7 +75,7 @@ fn old_main() {
     let start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     //
     let datas = [];
-    let moves = datas.map(|x| ChessMove { data: x });
+    let moves = datas.map(|x| return ChessMove { data: x });
     let mut chessgame = ChessBoard::from_fen(fen);
     for chessmove in moves {
         chessgame.update_state(chessmove);

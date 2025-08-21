@@ -23,12 +23,12 @@ impl Square {
 
     #[inline(always)]
     pub const fn nth(n: usize) -> Square {
-        SQUARES[n]
+        SQUARES[n as usize]
     }
 
     #[inline(always)]
     pub const fn nth_flipped(n: usize) -> Square {
-        SQUARES_FLIPPED[n]
+        SQUARES_FLIPPED[n as usize]
     }
 
     #[inline(always)]

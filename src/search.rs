@@ -1,6 +1,8 @@
+use std::i32;
 
 use crate::{
-    ChessBoard, ChessMove, GameResult, GameState, NodeData, PieceType, Side, transposition::NodeType,
+    ChessBoard, ChessBoardCore, ChessMove, GameResult, GameState, NodeData, PieceType, Side, TranspositionTable,
+    chessmove, transposition::NodeType, zobrist::ZobristHash,
 };
 
 pub trait Evaluator {
@@ -15,27 +17,29 @@ pub const MATERIAL_EVAL: MaterialEvaluator = MaterialEvaluator {};
 impl Evaluator for MaterialEvaluator {
     fn eval(&mut self, cb: &ChessBoard) -> i16 {
         let mut total: i16 = 0;
-        for chesspiece in cb.mailbox_iterator().flatten() {
-            total += match chesspiece {
-                (Side::White, PieceType::King) => 1000,
-                (Side::White, PieceType::Queen) => 0900,
-                (Side::White, PieceType::Knight) => 0300,
-                (Side::White, PieceType::Bishop) => 0300,
-                (Side::White, PieceType::Rook) => 0500,
-                (Side::White, PieceType::Pawn) => 0100,
-                (Side::Black, PieceType::King) => -1000,
-                (Side::Black, PieceType::Queen) => -0900,
-                (Side::Black, PieceType::Knight) => -0300,
-                (Side::Black, PieceType::Bishop) => -0300,
-                (Side::Black, PieceType::Rook) => -0500,
-                (Side::Black, PieceType::Pawn) => -0100,
+        for piece in cb.mailbox_iterator() {
+            if let Some(chesspiece) = piece {
+                total += match chesspiece {
+                    (Side::White, PieceType::King) => 1000,
+                    (Side::White, PieceType::Queen) => 0900,
+                    (Side::White, PieceType::Knight) => 0300,
+                    (Side::White, PieceType::Bishop) => 0300,
+                    (Side::White, PieceType::Rook) => 0500,
+                    (Side::White, PieceType::Pawn) => 0100,
+                    (Side::Black, PieceType::King) => -1000,
+                    (Side::Black, PieceType::Queen) => -0900,
+                    (Side::Black, PieceType::Knight) => -0300,
+                    (Side::Black, PieceType::Bishop) => -0300,
+                    (Side::Black, PieceType::Rook) => -0500,
+                    (Side::Black, PieceType::Pawn) => -0100,
+                }
             }
         }
 
-        match cb.side() {
+        return match cb.side() {
             Side::White => total,
             Side::Black => -total,
-        }
+        };
     }
 }
 
@@ -81,7 +85,7 @@ impl ChessBoard {
         };
 
         if d == 0 {
-            return (ev.eval(self), None);
+            return (ev.eval(&self), None);
         }
 
         let (moves, game_state) = self.try_generate_moves();
@@ -119,7 +123,7 @@ impl ChessBoard {
 
         //tranposition table keep-up
         self.update_tt(best_value, best_move, a, b, d as u16);
-        (best_value, best_move)
+        return (best_value, best_move);
     }
 
     //#[inline(always)]
