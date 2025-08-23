@@ -722,6 +722,12 @@ impl ChessBoardCore {
         self.pinned_bb.nth_is_not_zero(square)
     }
 
+    #[inline(always)]
+    // calculates number of enemy checking piece
+    pub(crate) const fn count_checking_pieces(&self) -> u32 {
+        self.check_bb.count_ones()
+    }
+
     //calculates all squares attacked by pinning pieces, that passes through a square
     pub(crate) const fn pin_mask(&self, square:Square) -> BitBoard {
         let mut pin_mask: BitBoard = BitBoard::ZERO;
@@ -737,12 +743,6 @@ impl ChessBoardCore {
         return pin_mask;
     } 
     
-    #[inline(always)]
-    // calculates number of enemy checking piece
-    pub(crate) const fn count_checking_pieces(&self) -> u32 {
-        self.check_bb.count_ones()
-    }
-
     #[inline(always)]
     pub(crate) const fn king_square(&self) -> Square {
         match self.side_to_move {

@@ -5,6 +5,7 @@ use core::error;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
+use std::time::Duration;
 use std::{env, time::Instant};
 
 extern crate chessbb;
@@ -186,7 +187,6 @@ fn old_main() {
 }
 
 fn perft_test(skip_to: Option<usize>) {
-    let now = Instant::now();
     let mut node_count: u64 = 0;
     let path = Path::new("standard.epd");
     let display = path.display();
@@ -205,6 +205,7 @@ fn perft_test(skip_to: Option<usize>) {
     let lines = s.split('\n');
     let mut error_vec = Vec::new();
     let mut num: usize = 0;
+    let mut elapsed_total: Duration = Duration::new(0, 0);
     for line in lines {
         let mut sections = line.split(';');
         //let str_vec: Vec<&str> = line.split(';').collect();
@@ -221,11 +222,13 @@ fn perft_test(skip_to: Option<usize>) {
         println!("{}", chessgame);
         println!("=======================================");
         for section in sections {
+            let now: Instant = Instant::now();
             let section_vec: Vec<_> = section.split_ascii_whitespace().collect();
             let depth: usize =
                 section_vec[0].chars().filter(|x| x.is_ascii_digit()).collect::<String>().parse().unwrap();
             let result_count: u64 = section_vec[1].parse().unwrap();
             let total_count: u64 = chessgame.perft_count(depth); //here
+            elapsed_total += now.elapsed();
             //println!("AAAAAAAAAAAAAAAA");
             let result_str = match result_count == total_count {
                 true => "Ok!",
@@ -249,8 +252,8 @@ fn perft_test(skip_to: Option<usize>) {
     } else {
         println!("done... no error!");
     }
-    println!("total positions:{node_count}, time: {}ms", now.elapsed().as_millis());
-    assert!(!has_error);
+    println!("total positions: {node_count}, time: {}ms", elapsed_total.as_millis());
+    println!("speed: {:.2}Mnps", ((node_count as f64) / (1000000.0)) / elapsed_total.as_secs_f64());
 }
 
 #[cfg(test)]

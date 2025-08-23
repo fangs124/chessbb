@@ -201,7 +201,7 @@ impl BitBoard {
 }
 
 
-pub(crate) const RAYS: [[BitBoard; 64]; 64] = rays();
+pub(crate) static RAYS: [[BitBoard; 64]; 64] = rays();
 
 const fn rays() -> [[BitBoard; 64]; 64] {
     let mut rays: [[BitBoard; 64]; 64] = [[BitBoard::ZERO; 64]; 64];
@@ -211,14 +211,11 @@ const fn rays() -> [[BitBoard; 64]; 64] {
         let mut j: usize = 0;
         while j < 64 {
             let j_square = Square::new(j as u8);
-            let data = (1u64 << i) | (1u64 << j);
-            let squares = BitBoard { data };
+            let squares = BitBoard { data: (1u64 << i) | (1u64 << j) };
             if (ROWS[i] == ROWS[j]) || (COLS[i] == COLS[j]) {
-                let data: u64 = get_rook_attack(i_square, squares).data & get_rook_attack(j_square, squares).data;
-                rays[i][j].data = data;
+                rays[i][j].data = get_rook_attack(i_square, squares).data & get_rook_attack(j_square, squares).data;
             } else if (DDIAG[i] == DDIAG[j]) || (ADIAG[i] == ADIAG[j]) {
-                let data = get_bishop_attack(i_square, squares).data & get_bishop_attack(j_square, squares).data;
-                rays[i][j].data = data;
+                rays[i][j].data = get_bishop_attack(i_square, squares).data & get_bishop_attack(j_square, squares).data;
             }
             j += 1;
         }
