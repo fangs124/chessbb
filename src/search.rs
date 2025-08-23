@@ -1,5 +1,3 @@
-use std::i32;
-
 use crate::{ChessBoard, ChessMove, GameResult, GameState, NodeData, NodeType, PieceType, Side, TranspositionTable};
 
 pub trait Evaluator {

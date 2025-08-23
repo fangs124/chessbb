@@ -640,10 +640,7 @@ impl ChessBoardCore {
         let blockers: BitBoard = self.blockers();
         match self.side_to_move {
             Side::White => {
-                let king_square = match self.piece_bbs[0].lsb_square() {
-                    Some(x) => x,
-                    None => panic!("{}", self),
-                };
+                let king_square: Square = self.piece_bbs[0].lsb_square().unwrap();
 
                 let queen_bb: BitBoard = self.piece_bbs[07].bit_and(&get_queen_attack(king_square, blockers));
                 let knight_bb: BitBoard = self.piece_bbs[08].bit_and(&get_knight_attack(king_square));
@@ -654,10 +651,7 @@ impl ChessBoardCore {
             }
 
             Side::Black => {
-                let king_square = match self.piece_bbs[6].lsb_square() {
-                    Some(x) => x,
-                    None => panic!("{}", self),
-                };
+                let king_square: Square = self.piece_bbs[6].lsb_square().unwrap();
 
                 let queen_bb: BitBoard = self.piece_bbs[01].bit_and(&get_queen_attack(king_square, blockers));
                 let knight_bb: BitBoard = self.piece_bbs[02].bit_and(&get_knight_attack(king_square));
