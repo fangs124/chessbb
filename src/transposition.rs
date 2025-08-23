@@ -38,19 +38,31 @@ pub enum NodeType {
 //can make this generic if necessary. otherwise it adds complication to the code right now
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TranspositionTable {
-    data: Box<[NodeData; DEFAULT_SIZE]>,
+    data: Box<[NodeData]>,
 }
 
 //const foo: usize = std::mem::size_of::<NodeData>();
-const DEFAULT_SIZE: usize = 1 << 24;
+const DEFAULT_SIZE: usize = 1 << 22;
 
 impl TranspositionTable {
     #[inline(always)]
     pub fn new() -> Self {
-        return TranspositionTable { data: Box::new([NodeData::const_default(); DEFAULT_SIZE]) };
+        return TranspositionTable { data: vec![NodeData::const_default(); DEFAULT_SIZE].into_boxed_slice() };
+    }
+
+    #[rustfmt::skip]
+    #[inline(always)]
+    pub fn update_tt(&mut self, hash: ZobristHash, value: i16, chess_move: Option<ChessMove>, a: i16, b: i16, d: u16) {
+        let node_type = NodeData::value_type(value, a, b);
+        match node_type {
+            NodeType::Beta => self.store(hash, d, value, Some(node_type), None),
+            _ => self.store(hash, d, value, Some(node_type), chess_move),
+        }
+        ;
     }
 
     //TODO need to think of replacement policy. right now it uses the naive always replace
+    #[rustfmt::skip]
     #[inline(always)]
     pub fn store(&mut self, hash: ZobristHash, depth: u16, eval: i16, ty: Option<NodeType>, best: Option<ChessMove>) {
         self.data[hash] = NodeData::new(hash, depth, eval, ty, best);
@@ -98,8 +110,13 @@ impl NodeData {
     }
 
     #[inline(always)]
-    pub const fn is_valid(&self) -> bool {
-        return !matches!(self.ty, None);
+    pub const fn is_valid(&self, hash: ZobristHash) -> bool {
+        return !matches!(self.ty, None) && matches!(self.key, hash);
+    }
+
+    #[inline(always)]
+    pub const fn key(&self) -> ZobristHash {
+        return self.key;
     }
 
     #[inline(always)]

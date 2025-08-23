@@ -9,74 +9,20 @@ use std::{env, time::Instant};
 
 extern crate chessbb;
 fn main() {
-    old_main();
-    /*
-    let path = Path::new("standard.epd");
-    let display = path.display();
-
-    let mut file = match File::open(&path) {
-        Err(why) => panic!("couldn't open {display}: {why}"),
-        Ok(file) => file,
-    };
-
-    let mut s = String::new();
-    match file.read_to_string(&mut s) {
-        Err(why) => panic!("couldn't read {}: {}", display, why),
-        Ok(_) => print!("{} contains:\n{}", display, s),
-    }
-    //print!("{s}");
-    let lines = s.split('\n');
-    let mut error_vec = Vec::new();
-    let mut num: usize = 0;
-    for line in lines {
-        let mut sections = line.split(';');
-        //let str_vec: Vec<&str> = line.split(';').collect();
-        let start_fen = sections.next().unwrap();
-        num += 1;
-        let mut perft_result: Vec<(usize, usize)> = Vec::new();
-        let mut chessgame = ChessGame::from_fen(start_fen);
-        println!("\n======== position number {num} ========\n");
-        println!("fen: {start_fen}");
-        println!("{}", chessgame.chessboard);
-        println!("=======================================");
-        for section in sections {
-            let section_vec: Vec<_> = section.split_ascii_whitespace().collect();
-            let depth: usize =
-                section_vec[0].chars().filter(|x| x.is_ascii_digit()).collect::<String>().parse().unwrap();
-            let result_count: u64 = section_vec[1].parse().unwrap();
-            let total_count = chessgame.perft_count(depth);
-            let result_str = match result_count == total_count {
-                true => "Ok!",
-                false => "Error!",
-            };
-            if result_str == "Error!" {
-                error_vec.push(format!(
-                    "start_fen: {start_fen}\ndepth: {depth}, result_count: {result_count}, total_count: {total_count}, {result_str}"
-                ))
-            }
-            println!("depth: {depth}, result_count: {result_count}, total_count: {total_count}, {result_str}");
-        }
-        println!("=======================================");
-    }
-    let has_error = !error_vec.is_empty();
-    if has_error {
-        for str_error in error_vec {
-            println!("{str_error}");
-        }
-    } else {
-        println!("done... no error!");
-    }*/
+    unsafe { env::set_var("RUST_BACKTRACE", "1") };
+    //old_main();
+    perft_test(None);
 }
 
 fn old_main() {
-    unsafe { env::set_var("RUST_BACKTRACE", "full") };
     /* from starting pos */
-    let fen = "8/8/n6n/p2brkp1/7p/2p1p2N/P1P3PP/R1BQ1BKR w - - 0 1";
+    let fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1";
     let start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    //
+    //let datas = [2551, 2455, 1959, 1999];
     let datas = [];
     let moves = datas.map(|x| return ChessMove { data: x });
     let mut chessgame = ChessBoard::from_fen(fen);
+    chessgame.print_debug();
     for chessmove in moves {
         chessgame.update_state(chessmove);
     }
@@ -192,7 +138,7 @@ fn old_main() {
     //println!("chessboard.pinned_bb:\n{}\n", chessboard.pinned_bb);
     //println!("chessboard.pinner_bb:\n{}\n", chessboard.pinner_bb);
     //println!("chessboard.check_bb:\n{}\n", chessboard.check_bb);
-    //println!("chessboard.check_mask:\n{}\n", chessboard.check_mask);
+    //println!("chessboard.check_mask:\n{}\n", chessgame.check_mask);
     println!("==== start position ====\n");
     println!("{}", chessgame);
     let mut result_str_vec = Vec::<String>::new();
@@ -211,7 +157,7 @@ fn old_main() {
     //println!("mailbox:\n{:#?}", chessboard.mailbox());
     //println!("========================");
     //panic!();
-    let mut depth: usize = 5;
+    let mut depth: usize = 1;
     let max_depth: usize = 5;
     while depth <= max_depth {
         let now = Instant::now();
@@ -239,20 +185,136 @@ fn old_main() {
     }
 }
 
+fn perft_test(skip_to: Option<usize>) {
+    let now = Instant::now();
+    let mut node_count: u64 = 0;
+    let path = Path::new("standard.epd");
+    let display = path.display();
+
+    let mut file = match File::open(&path) {
+        Err(why) => panic!("couldn't open {display}: {why}"),
+        Ok(file) => file,
+    };
+
+    let mut s = String::new();
+    match file.read_to_string(&mut s) {
+        Err(why) => panic!("couldn't read {}: {}", display, why),
+        Ok(_) => print!("{} contains:\n{}", display, s),
+    }
+    //print!("{s}");
+    let lines = s.split('\n');
+    let mut error_vec = Vec::new();
+    let mut num: usize = 0;
+    for line in lines {
+        let mut sections = line.split(';');
+        //let str_vec: Vec<&str> = line.split(';').collect();
+        let start_fen = sections.next().unwrap();
+        num += 1;
+        if skip_to.is_some() {
+            if num != skip_to.unwrap() {
+                continue;
+            }
+        }
+        let mut chessgame = ChessBoard::from_fen(start_fen);
+        println!("\n======== position number {num} ========\n");
+        println!("fen: {start_fen}");
+        println!("{}", chessgame);
+        println!("=======================================");
+        for section in sections {
+            let section_vec: Vec<_> = section.split_ascii_whitespace().collect();
+            let depth: usize =
+                section_vec[0].chars().filter(|x| x.is_ascii_digit()).collect::<String>().parse().unwrap();
+            let result_count: u64 = section_vec[1].parse().unwrap();
+            let total_count: u64 = chessgame.perft_count(depth); //here
+            //println!("AAAAAAAAAAAAAAAA");
+            let result_str = match result_count == total_count {
+                true => "Ok!",
+                false => "Error!",
+            };
+            if result_str == "Error!" {
+                error_vec.push(format!(
+                    "start_fen: {start_fen}\ndepth: {depth}, result_count: {result_count}, total_count: {total_count}, {result_str}"
+                ))
+            }
+            println!("depth: {depth}, result_count: {result_count}, total_count: {total_count}, {result_str}");
+            node_count += total_count;
+        }
+        println!("=======================================");
+    }
+    let has_error = !error_vec.is_empty();
+    if has_error {
+        for str_error in error_vec {
+            println!("{str_error}");
+        }
+    } else {
+        println!("done... no error!");
+    }
+    println!("total positions:{node_count}, time: {}ms", now.elapsed().as_millis());
+    assert!(!has_error);
+}
+
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
 
-    //#[test]
-    //fn test_add() {
-    //    assert_eq!(add(1, 2), 3);
-    //}
-    //
-    //#[test]
-    //fn test_bad_add() {
-    //    // This assert would fire and test will fail.
-    //    // Please note, that private functions can be tested too!
-    //    assert_eq!(bad_add(1, 2), 3);
-    //}
+    #[test]
+    fn perft_test() {
+        let path = Path::new("standard.epd");
+        let display = path.display();
+
+        let mut file = match File::open(&path) {
+            Err(why) => panic!("couldn't open {display}: {why}"),
+            Ok(file) => file,
+        };
+
+        let mut s = String::new();
+        match file.read_to_string(&mut s) {
+            Err(why) => panic!("couldn't read {}: {}", display, why),
+            Ok(_) => print!("{} contains:\n{}", display, s),
+        }
+        //print!("{s}");
+        let lines = s.split('\n');
+        let mut error_vec = Vec::new();
+        let mut num: usize = 0;
+        for line in lines {
+            let mut sections = line.split(';');
+            //let str_vec: Vec<&str> = line.split(';').collect();
+            let start_fen = sections.next().unwrap();
+            num += 1;
+            let mut perft_result: Vec<(usize, usize)> = Vec::new();
+            let mut chessgame = ChessBoard::from_fen(start_fen);
+            println!("\n======== position number {num} ========\n");
+            println!("fen: {start_fen}");
+            println!("{}", chessgame);
+            println!("=======================================");
+            for section in sections {
+                let section_vec: Vec<_> = section.split_ascii_whitespace().collect();
+                let depth: usize =
+                    section_vec[0].chars().filter(|x| x.is_ascii_digit()).collect::<String>().parse().unwrap();
+                let result_count: u64 = section_vec[1].parse().unwrap();
+                let total_count = chessgame.perft_count(depth);
+                let result_str = match result_count == total_count {
+                    true => "Ok!",
+                    false => "Error!",
+                };
+                if result_str == "Error!" {
+                    error_vec.push(format!(
+                    "start_fen: {start_fen}\ndepth: {depth}, result_count: {result_count}, total_count: {total_count}, {result_str}"
+                ))
+                }
+                println!("depth: {depth}, result_count: {result_count}, total_count: {total_count}, {result_str}");
+            }
+            println!("=======================================");
+        }
+        let has_error = !error_vec.is_empty();
+        if has_error {
+            for str_error in error_vec {
+                println!("{str_error}");
+            }
+        } else {
+            println!("done... no error!");
+        }
+        assert!(!has_error);
+    }
 }

@@ -1,9 +1,6 @@
 use std::i32;
 
-use crate::{
-    ChessBoard, ChessBoardCore, ChessMove, GameResult, GameState, NodeData, PieceType, Side, TranspositionTable,
-    chessmove, transposition::NodeType, zobrist::ZobristHash,
-};
+use crate::{ChessBoard, ChessMove, GameResult, GameState, NodeData, NodeType, PieceType, Side, TranspositionTable};
 
 pub trait Evaluator {
     //i16 is used here as a fixed-precision evaluation out of 1000
@@ -59,21 +56,26 @@ impl ChessBoard {
         d: usize,
         ply: usize,
         ev: &mut impl Evaluator,
+        tt: &mut TranspositionTable,
     ) -> (i16, Option<ChessMove>) {
-        let data: NodeData = self.look_up_tt();
+        let mut alpha: i16 = a;
+        //let mut beta: i16 = b;
+        let data: NodeData = tt.look_up(&self.hash());
         if let Some(ty) = data.ty() {
-            if data.depth() as usize >= d {
+            if data.depth() as usize >= d && data.key() == self.hash() {
                 match ty {
                     NodeType::Exact => return data.pair(),
                     NodeType::Alpha => {
                         if data.eval() >= b {
                             return data.pair();
                         }
+                        alpha = alpha.max(data.eval());
                     }
                     NodeType::Beta => {
-                        if data.eval() <= a {
+                        if data.eval() <= a && data.best().is_some() {
                             return data.pair();
                         }
+                        //beta = beta.min(data.eval());
                     }
                 }
             }
@@ -99,21 +101,21 @@ impl ChessBoard {
         }
 
         //TODO sort moves here
-        let mut alpha: i16 = a;
         let mut best_value: i16 = i16::MIN + 1;
         let mut best_move: Option<ChessMove> = None;
 
         for chessmove in moves {
-            let snapshot = self.explore_state(chessmove);
-            let (score, chessmove) = self.negamax(-b, -alpha, d - 1, ply + 1, ev);
+            let snapshot: crate::ChessBoardSnapshot = self.explore_state(chessmove);
+            let (score, chessmove) = self.negated_negamax(-b, -alpha, d - 1, ply + 1, ev, tt);
             self.restore_state(snapshot);
 
             if score > best_value {
                 best_value = score;
-                best_move = Some(chessmove.unwrap());
-                if score > alpha {
-                    alpha = score;
-                }
+                best_move = chessmove;
+            }
+
+            if score > alpha {
+                alpha = score;
             }
 
             if score >= b {
@@ -122,67 +124,24 @@ impl ChessBoard {
         }
 
         //tranposition table keep-up
-        self.update_tt(best_value, best_move, a, b, d as u16);
+        tt.update_tt(self.hash(), best_value, best_move, a, b, d as u16);
         return (best_value, best_move);
     }
 
-    //#[inline(always)]
-    //pub fn negated_negamax(
-    //    &mut self,
-    //    a: i16,
-    //    b: i16,
-    //    d: usize,
-    //    ply: usize,
-    //    ev: &mut impl Evaluator,
-    //) -> (i16, Option<ChessMove>) {
-    //    self.negamax(a, b, d, ))
-    //}
-
-    //pub fn negamax(&mut self, a: i32, b: i32, d: usize, ev: impl Fn(&Self) -> i32) -> (i32, Option<ChessMove>) {
-    //    if d == 0 {
-    //        return (ev(&self), None);
-    //    }
-    //
-    //    let current_hash = self.hash();
-    //    if self.zobrist_table.count_hash(current_hash) == 3 {
-    //        return (0, None);
-    //    }
-    //
-    //    let moves_vec = self.generate_moves();
-    //    if moves_vec.len() == 0 {
-    //        if self.is_king_in_check(self.side()) {
-    //            return (((i32::MIN + 1) / 2) - (d as i32), None); //checkmate
-    //        } else {
-    //            return (0, None); //stalemate
-    //        }
-    //    }
-    //
-    //    let mut alpha = a;
-    //    let mut value = i32::MIN + 1;
-    //
-    //    let mut best_move: Option<ChessMove> = None;
-    //    for chessmove in moves_vec {
-    //        let old_core = self.core.clone();
-    //
-    //        self.update_state(chessmove);
-    //        let current_hash = self.hash();
-    //        self.zobrist_table.add(current_hash);
-    //        //&ev has type:
-    //        //&...&{closure@src/chessnet.rs:135:9: 135:31}
-    //        let new_value = -self.negamax(-b, -a, d - 1, &ev).0;
-    //        // value = max(value, new_value)
-    //        if new_value > value {
-    //            value = new_value;
-    //        }
-    //        // alpha = max(alpha, value)
-    //        if value > alpha {
-    //            alpha = value;
-    //            best_move = Some(chessmove);
-    //        }
-    //        //this is not necessary!
-    //        self.zobrist_table.remove_last(current_hash);
-    //        self.core = old_core;
-    //    }
-    //    return (value, best_move);
-    //}
+    #[inline(always)]
+    pub fn negated_negamax(
+        &mut self,
+        a: i16,
+        b: i16,
+        d: usize,
+        ply: usize,
+        ev: &mut impl Evaluator,
+        tt: &mut TranspositionTable,
+    ) -> (i16, Option<ChessMove>) {
+        negated_pair(self.negamax(a, b, d, ply, ev, tt))
+    }
+}
+#[inline(always)]
+fn negated_pair(pair: (i16, Option<ChessMove>)) -> (i16, Option<ChessMove>) {
+    (-pair.0, pair.1)
 }

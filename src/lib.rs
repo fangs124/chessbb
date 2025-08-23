@@ -20,7 +20,7 @@ pub use crate::bitboard::{PieceType, Side, ChessPiece};
 pub use crate::chessmove::ChessMove;
 pub use crate::square::Square;
 pub use crate::search::{Evaluator, MATERIAL_EVAL};
-pub use crate::transposition::{TranspositionTable, NodeData};
+pub use crate::transposition::{TranspositionTable, NodeData, NodeType};
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GameState {
     Finished(GameResult),
@@ -39,7 +39,7 @@ pub enum GameResult {
 pub struct ChessBoard{
     core: ChessBoardCore,
     zt: ZobristTable,
-    tt: TranspositionTable,
+    //tt: TranspositionTable,
 }
 
 impl Display for ChessBoard {
@@ -56,14 +56,14 @@ pub struct ChessBoardSnapshot {
 impl ChessBoard {
     #[inline(always)]
     pub fn start_pos() -> Self {
-        return ChessBoard { core: ChessBoardCore::start_pos(), zt: ZobristTable::initial_table(), tt: TranspositionTable::new()};
+        return ChessBoard { core: ChessBoardCore::start_pos(), zt: ZobristTable::initial_table()};
     }
 
     #[inline(always)]
     pub fn from_fen(input: &str) -> ChessBoard {
         let chessboard = ChessBoardCore::from_fen(input);
         let zobrist_table = ZobristTable::new(chessboard.hash());
-        return ChessBoard { core: chessboard, zt: zobrist_table, tt: TranspositionTable::new() };
+        return ChessBoard { core: chessboard, zt: zobrist_table };
     }
 
     #[inline(always)]
@@ -159,15 +159,29 @@ impl ChessBoard {
         self.core.is_king_in_check(king_side)
     }
 
-    #[inline(always)]
-    pub fn look_up_tt(&self) -> NodeData {
-        self.tt.look_up(&self.hash())
+    pub fn print_debug(&self) {
+        println!("enpassant_bb:\n\r{}\n\r", self.core.enpassant_bb);
+        println!("pinned_bb:\n\r{}\n\r", self.core.pinned_bb);
+        println!("pinner_bb:\n\r{}\n\r", self.core.pinner_bb);
+        println!("check_bb:\n\r{}\n\r", self.core.check_bb);
+        println!("check_mask:\n\r{}\n\r", self.core.check_mask);
+        //println!("chessmove: {:#?}", moves[8]);
+        //println!("castle_bools: {:#?}", chessboard.castle_bools);
+        //println!("chessboard.enpassant_bb:\n{}\n", chessboard.enpassant_bb);
+        //println!("chessboard.pinned_bb:\n{}\n", chessboard.pinned_bb);
+        //println!("chessboard.pinner_bb:\n{}\n", chessboard.pinner_bb);
+        //println!("chessboard.check_bb:\n{}\n", chessboard.check_bb);
+        //println!("chessboard.check_mask:\n{}\n", chessgame.check_mask);
     }
-
-    #[inline(always)]
-    pub fn update_tt(&mut self, value: i16, chess_move:Option<ChessMove>, a: i16, b:i16, d:u16) {
-        self.tt.store(self.hash(), d, value, Some(NodeData::value_type(value, a, b)), chess_move);
-    }
+    //#[inline(always)]
+    //pub fn look_up_tt(&self) -> NodeData {
+    //    self.tt.look_up(&self.hash())
+    //}
+    //
+    //#[inline(always)]
+    //pub fn update_tt(&mut self, value: i16, chess_move:Option<ChessMove>, a: i16, b:i16, d:u16) {
+    //    self.tt.store(self.hash(), d, value, Some(NodeData::value_type(value, a, b)), chess_move);
+    //}
 
 }
 
