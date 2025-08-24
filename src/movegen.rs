@@ -319,6 +319,7 @@ impl ChessBoardCore {
 
     pub fn generate_moves(&self) -> Vec<ChessMove> {
         let mut moves: Vec<ChessMove> = Vec::new();
+        let mut king_moves: Vec<ChessMove> = Vec::new();
         let side = self.side_to_move;
 
         // consider if king is in check
@@ -356,6 +357,10 @@ impl ChessBoardCore {
                                 }
                             }
                         }
+
+                        /* moves and attacks */
+                        king_moves.append(&mut self.calculate_moves(source, piece_type));
+                        sources.pop_bit(source);
                     }
 
                     PieceType::Knight => {
@@ -364,16 +369,24 @@ impl ChessBoardCore {
                             sources.pop_bit(source);
                             continue;
                         }
+                        /* moves and attacks */
+                        moves.append(&mut self.calculate_moves(source, piece_type));
+                        sources.pop_bit(source);
                     }
 
-                    _ => (),
+                    _ => {
+                        /* moves and attacks */
+                        moves.append(&mut self.calculate_moves(source, piece_type));
+                        sources.pop_bit(source);
+                    }
                 }
 
-                /* moves and attacks */
-                moves.append(&mut self.calculate_moves(source, piece_type));
-                sources.pop_bit(source);
+                // /* moves and attacks */
+                // moves.append(&mut self.calculate_moves(source, piece_type));
+                // sources.pop_bit(source);
             }
         }
+        moves.append(&mut king_moves);
         return moves;
     }
 
