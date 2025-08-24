@@ -14,7 +14,7 @@ impl ChessBoardCore {
             Side::White => 6,
             Side::Black => 0,
         };
-        assert!(self.piece_bbs[enemy_king_index].nth_is_zero(target), "position:{}\n\r\n\r\n\r\n\r", self);
+        assert!(self.piece_bbs[enemy_king_index].nth_is_zero(target), "position:{}\n\r", self);
         let mut current_hash = self.hash();
         current_hash ^= ZobristHash::compute_enpassant_hash(self.enpassant_bb);
 
