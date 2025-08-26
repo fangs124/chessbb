@@ -74,9 +74,9 @@ impl ChessBoard {
 
     #[inline(always)]
     pub fn explore_state(&mut self, chess_move: ChessMove) -> ChessBoardSnapshot {
-        let core = self.core;
+        let core: ChessBoardCore = self.core.clone();
         self.update_state(chess_move);
-        return ChessBoardSnapshot{core, hash: self.core.hash() };
+        return ChessBoardSnapshot{ core, hash: self.core.hash() };
     }
 
     #[inline(always)]

@@ -1,3 +1,5 @@
+use std::ops::BitAnd;
+
 use super::chessmove::*;
 use super::*;
 
@@ -14,7 +16,13 @@ impl ChessBoardCore {
             Side::White => 6,
             Side::Black => 0,
         };
-        assert!(self.piece_bbs[enemy_king_index].nth_is_zero(target), "position:{}\n\r", self);
+        assert!(
+            self.piece_bbs[enemy_king_index].nth_is_zero(target),
+            "position:\n\r{}\n\rposition:\n\r{}\n\rposition:\n\r{}\n\r",
+            self,
+            self,
+            self
+        );
         let mut current_hash = self.hash();
         current_hash ^= ZobristHash::compute_enpassant_hash(self.enpassant_bb);
 
@@ -561,7 +569,7 @@ impl ChessBoardCore {
         }
 
         /* pawn en-passant */
-        if self.enpassant_bb.is_not_zero() && !is_pinned_diag && !is_pinned_horz && !is_pinned_vert {
+        if self.enpassant_bb.is_not_zero() && !is_pinned_horz && !is_pinned_vert {
             let mut attacks = match side {
                 Side::White => self.enpassant_bb.bit_and(&get_w_pawn_attack(source)),
                 Side::Black => self.enpassant_bb.bit_and(&get_b_pawn_attack(source)),
@@ -580,14 +588,16 @@ impl ChessBoardCore {
                 let special_row_bb = BitBoard::new(
                     (255u64 << 8 * ROWS[source.to_usize()]) & (255u64 << 8 * (ROWS[king_square.to_usize()])),
                 );
-                let (enemy_rook_index, enemy_pawn_index, enemy_pawn_square) = match side {
-                    Side::White => (cpt_index!(r), cpt_index!(p), Square::new(attack.to_u8() - 8u8)),
-                    Side::Black => (cpt_index!(R), cpt_index!(P), Square::new(attack.to_u8() + 8u8)),
+                let (enemy_rook_index, enemy_queen_index, enemy_pawn_index, enemy_pawn_square) = match side {
+                    Side::White => (cpt_index!(r), cpt_index!(q), cpt_index!(p), Square::new(attack.to_u8() - 8u8)),
+                    Side::Black => (cpt_index!(R), cpt_index!(Q), cpt_index!(P), Square::new(attack.to_u8() + 8u8)),
                 };
 
                 //if (chessboard.piece_bbs[enemy_rook_index].bit_or(&chessboard.piece_bbs[king_index])).bit_and(&king_row_bb).count_ones() >= 2
                 //if enemy rook and friendly king is in the same row, check for special case
-                if self.piece_bbs[enemy_rook_index].bit_and(&special_row_bb).is_not_zero() {
+                if self.piece_bbs[enemy_rook_index].bit_and(&special_row_bb).is_not_zero()
+                    || self.piece_bbs[enemy_queen_index].bit_and(&special_row_bb).is_not_zero()
+                {
                     //NOTE: this is computationally costly
                     //check if en-passant leaves king in check
                     let mut test_cb: ChessBoardCore = self.duplicate();

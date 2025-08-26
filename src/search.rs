@@ -5,6 +5,7 @@ pub trait Evaluator {
     fn eval(&mut self, cb: &ChessBoard) -> i16;
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MaterialEvaluator;
 
 pub const MATERIAL_EVAL: MaterialEvaluator = MaterialEvaluator {};
@@ -127,7 +128,7 @@ impl ChessBoard {
     }
 
     #[inline(always)]
-    pub fn negated_negamax(
+    fn negated_negamax(
         &mut self,
         a: i16,
         b: i16,
@@ -139,7 +140,78 @@ impl ChessBoard {
         negated_pair(self.negamax(a, b, d, ply, ev, tt))
     }
 }
+
 #[inline(always)]
 fn negated_pair(pair: (i16, Option<ChessMove>)) -> (i16, Option<ChessMove>) {
     (-pair.0, pair.1)
+}
+
+#[allow(non_camel_case_types)]
+pub struct MCTS_Tree {
+    root: MCTS_Node,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, Clone, PartialEq)]
+pub struct MCTS_Node {
+    is_visited: bool,
+    is_expanded: bool,
+    total_reward: i32,
+    total_visits: u32,
+    children: Vec<(MCTS_Node, f32)>,
+}
+
+pub trait Policy {
+    //i16 is used here as a fixed-precision evaluation out of 1000
+    fn policy(&mut self, cb: &ChessBoard) -> Vec<(ChessMove, f32)>;
+}
+
+impl ChessBoard {
+    pub fn rollout(&self) {}
+}
+
+//const is blocked here mainly by f32::sqrt() fn not being const
+impl MCTS_Node {
+    const CONSTANT: f32 = 0.5;
+    pub fn traverse(&self) -> &MCTS_Node {
+        let mut node = self;
+        while node.is_expanded {
+            node = node.best_uct();
+            //node = best_uct(node);
+        }
+        for child in &node.children {
+            if !child.0.is_visited {
+                return &child.0;
+            }
+        }
+        return node;
+    }
+
+    pub fn best_uct(&self) -> &MCTS_Node {
+        let mut best: f32 = 0.0;
+        let mut best_node: &MCTS_Node = self;
+        let mut i: usize = 0;
+        while i < self.children.len() {
+            let value = self.uct(i);
+            if value > best {
+                best = value;
+                best_node = &self.children[i].0;
+            }
+            i += 1;
+        }
+        return best_node;
+    }
+
+    #[inline(always)]
+    pub fn uct(&self, i: usize) -> f32 {
+        assert!(i < self.children.len());
+        let (node, prior) = &self.children[i];
+        return (node.total_reward as f32) / (node.total_visits as f32)
+            + MCTS_Node::CONSTANT * prior * ((self.total_reward as f32).sqrt() / (1.0 + (node.total_reward as f32)));
+    }
+
+    //pub fn rollout(&self) {
+    //    let node = self;
+    //    while
+    //}
 }
