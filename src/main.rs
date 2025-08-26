@@ -11,16 +11,16 @@ use std::{env, time::Instant};
 extern crate chessbb;
 fn main() {
     unsafe { env::set_var("RUST_BACKTRACE", "1") };
-    old_main();
-    //perft_test(None);
+    //old_main();
+    perft_test(None);
 }
 
 fn old_main() {
     /* from starting pos */
-    let fen = "8/pp6/8/3P4/N1pkp1Q1/1P6/PP1P1PPP/R1B2RK1 w - - 1 1";
+    let fen = "8/2N4k/8/3p4/N1P1p3/1P2P2K/PQB2P2/R1B3R1 w - - 0 1";
     let start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     //let datas = [2551, 2455, 1959, 1999];
-    let datas = [1674, 2551, 391, 1308, 2201, 852, 1804];
+    let datas = [1674];
     let moves = datas.map(|x| return ChessMove { data: x });
     let mut chessgame = ChessBoard::from_fen(fen);
     chessgame.print_debug();

@@ -600,7 +600,7 @@ impl ChessBoardCore {
                 {
                     //NOTE: this is computationally costly
                     //check if en-passant leaves king in check
-                    let mut test_cb: ChessBoardCore = self.duplicate();
+                    let mut test_cb: ChessBoardCore = self.clone();
                     let i = match side {
                         Side::White => cpt_index!(P),
                         Side::Black => cpt_index!(p),
@@ -609,7 +609,7 @@ impl ChessBoardCore {
                     test_cb.piece_bbs[i].pop_bit(source); //remove from source square
                     test_cb.piece_bbs[i].set_bit(attack); //add to attack square
                     test_cb.piece_bbs[enemy_pawn_index].pop_bit(enemy_pawn_square);
-                    if test_cb.is_king_in_check(side) {
+                    if test_cb.is_king_in_check(test_cb.side()) {
                         attacks.pop_bit(attack);
                         continue;
                     }
@@ -638,6 +638,25 @@ impl ChessBoardCore {
                     }
                     attacks.pop_bit(attack);
                     continue;
+                }
+
+                //if pinned diagonally, can only en-passant to remove pinning piece
+                //FIXME: hack costly solution
+                if is_pinned_diag {
+                    //check if en-passant leaves king in check
+                    let mut test_cb: ChessBoardCore = self.clone();
+                    let i = match side {
+                        Side::White => cpt_index!(P),
+                        Side::Black => cpt_index!(p),
+                    };
+
+                    test_cb.piece_bbs[i].pop_bit(source); //remove from source square
+                    test_cb.piece_bbs[i].set_bit(attack); //add to attack square
+                    test_cb.piece_bbs[enemy_pawn_index].pop_bit(enemy_pawn_square);
+                    if test_cb.is_king_in_check(test_cb.side()) {
+                        attacks.pop_bit(attack);
+                        continue;
+                    }
                 }
 
                 //if there are no checks
