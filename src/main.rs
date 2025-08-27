@@ -21,7 +21,7 @@ fn old_main() {
     let start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     //let datas = [2551, 2455, 1959, 1999];
     let datas = [1674];
-    let moves = datas.map(|x| return ChessMove { data: x });
+    let moves = datas.map(|data: u16| return ChessMove::from_raw(data));
     let mut chessgame = ChessBoard::from_fen(fen);
     chessgame.print_debug();
     for chessmove in moves {
@@ -145,7 +145,7 @@ fn old_main() {
     let mut result_str_vec = Vec::<String>::new();
     for chessmove in moves {
         let mut s = chessmove.print_move();
-        s.push_str(format!(" - data: {}", chessmove.data).as_str());
+        s.push_str(format!(" - data: {}", chessmove.data()).as_str());
         result_str_vec.push(s);
     }
     for result_str in result_str_vec {

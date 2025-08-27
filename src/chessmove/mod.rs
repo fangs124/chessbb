@@ -48,7 +48,7 @@ note: castling move are encoded as follows
 //FIXME need to change visibility here... its only pub for debug
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ChessMove {
-    pub data: u16,
+    data: u16,
 }
 
 //needed to sort chess moves
@@ -139,6 +139,16 @@ impl ChessMove {
     #[inline(always)]
     pub(crate) const fn set_target(&mut self, index: usize) {
         self.data &= ((index << 6) & 0b111111_000000) as u16;
+    }
+
+    #[inline(always)]
+    pub const fn from_raw(data: u16) -> ChessMove {
+        ChessMove { data }
+    }
+
+    #[inline(always)]
+    pub const fn data(&self) -> u16 {
+        self.data
     }
 
     pub(crate) const fn new(s: Square, t: Square, m: MoveType) -> Self {
