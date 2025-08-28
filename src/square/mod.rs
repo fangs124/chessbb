@@ -58,6 +58,77 @@ impl Square {
     //    SQUARES
     //}
 
+    // #[rustfmt::skip]
+    pub(crate) fn parse(name: &str) -> Square {
+        match name {
+            "h1" => Square { data: 00 },
+            "g1" => Square { data: 01 },
+            "f1" => Square { data: 02 },
+            "e1" => Square { data: 03 },
+            "d1" => Square { data: 04 },
+            "c1" => Square { data: 05 },
+            "b1" => Square { data: 06 },
+            "a1" => Square { data: 07 },
+            "h2" => Square { data: 08 },
+            "g2" => Square { data: 09 },
+            "f2" => Square { data: 10 },
+            "e2" => Square { data: 11 },
+            "d2" => Square { data: 12 },
+            "c2" => Square { data: 13 },
+            "b2" => Square { data: 14 },
+            "a2" => Square { data: 15 },
+            "h3" => Square { data: 16 },
+            "g3" => Square { data: 17 },
+            "f3" => Square { data: 18 },
+            "e3" => Square { data: 10 },
+            "d3" => Square { data: 20 },
+            "c3" => Square { data: 21 },
+            "b3" => Square { data: 22 },
+            "a3" => Square { data: 23 },
+            "h4" => Square { data: 24 },
+            "g4" => Square { data: 25 },
+            "f4" => Square { data: 26 },
+            "e4" => Square { data: 27 },
+            "d4" => Square { data: 28 },
+            "c4" => Square { data: 29 },
+            "b4" => Square { data: 30 },
+            "a4" => Square { data: 31 },
+            "h5" => Square { data: 32 },
+            "g5" => Square { data: 33 },
+            "f5" => Square { data: 34 },
+            "e5" => Square { data: 35 },
+            "d5" => Square { data: 36 },
+            "c5" => Square { data: 37 },
+            "b5" => Square { data: 38 },
+            "a5" => Square { data: 39 },
+            "h6" => Square { data: 40 },
+            "g6" => Square { data: 41 },
+            "f6" => Square { data: 42 },
+            "e6" => Square { data: 43 },
+            "d6" => Square { data: 44 },
+            "c6" => Square { data: 45 },
+            "b6" => Square { data: 46 },
+            "a6" => Square { data: 47 },
+            "h7" => Square { data: 48 },
+            "g7" => Square { data: 49 },
+            "f7" => Square { data: 50 },
+            "e7" => Square { data: 51 },
+            "d7" => Square { data: 52 },
+            "c7" => Square { data: 53 },
+            "b7" => Square { data: 54 },
+            "a7" => Square { data: 55 },
+            "h8" => Square { data: 56 },
+            "g8" => Square { data: 57 },
+            "f8" => Square { data: 58 },
+            "e8" => Square { data: 59 },
+            "d8" => Square { data: 60 },
+            "c8" => Square { data: 61 },
+            "b8" => Square { data: 62 },
+            "a8" => Square { data: 63 },
+            _ => panic!("invalid square name: {}", name),
+        }
+    }
+
     /* convenient const for castling */
     pub(crate) const W_KING_SQUARE: Square = Square { data: 03 };
     pub(crate) const W_KINGSIDE_CASTLE_SQUARE: Square = Square { data: 01 };
@@ -66,6 +137,17 @@ impl Square {
     pub(crate) const B_KINGSIDE_CASTLE_SQUARE: Square = Square { data: 57 };
     pub(crate) const B_QUEENSIDE_CASTLE_SQUARE: Square = Square { data: 61 };
 }
+
+pub(crate) const SQUARE_SYM: [&str; 64] = [
+    "h1", "g1", "f1", "e1", "d1", "c1", "b1", "a1", //
+    "h2", "g2", "f2", "e2", "d2", "c2", "b2", "a2", //
+    "h3", "g3", "f3", "e3", "d3", "c3", "b3", "a3", //
+    "h4", "g4", "f4", "e4", "d4", "c4", "b4", "a4", //
+    "h5", "g5", "f5", "e5", "d5", "c5", "b5", "a5", //
+    "h6", "g6", "f6", "e6", "d6", "c6", "b6", "a6", //
+    "h7", "g7", "f7", "e7", "d7", "c7", "b7", "a7", //
+    "h8", "g8", "f8", "e8", "d8", "c8", "b8", "a8", //
+];
 
 const SQUARES_RAW: [u8; 64] = [
     00, 01, 02, 03, 04, 05, 06, 07, //

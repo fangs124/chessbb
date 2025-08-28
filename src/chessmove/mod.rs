@@ -151,7 +151,7 @@ impl ChessMove {
         self.data
     }
 
-    pub(crate) const fn new(s: Square, t: Square, m: MoveType) -> Self {
+    pub const fn new(s: Square, t: Square, m: MoveType) -> Self {
         // can't promote to king/pawn
         // ps: !matches!(...) is ugly
         assert!(matches!(m, MoveType::Promotion(PieceType::King)) == false);
