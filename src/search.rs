@@ -103,14 +103,14 @@ impl ChessBoard {
         let mut best_value: i16 = i16::MIN + 1;
         let mut best_move: Option<ChessMove> = None;
 
-        for chessmove in moves {
-            let snapshot: crate::ChessBoardSnapshot = self.explore_state(chessmove);
-            let (score, chessmove) = self.negated_negamax(-b, -alpha, d - 1, ply + 1, ev, tt);
+        for chess_move in moves {
+            let snapshot: crate::ChessBoardSnapshot = self.explore_state(chess_move);
+            let (score, next_move) = self.negated_negamax(-b, -alpha, d - 1, ply + 1, ev, tt);
             self.restore_state(snapshot);
 
             if score > best_value {
                 best_value = score;
-                best_move = chessmove;
+                best_move = Some(chess_move);
             }
 
             if score > alpha {
