@@ -58,27 +58,27 @@ impl ChessBoard {
         tt: &mut TranspositionTable,
     ) -> (i16, Option<ChessMove>) {
         let mut alpha: i16 = a;
-        //let mut beta: i16 = b;
-        //let data: NodeData = tt.look_up(&self.hash());
-        //if let Some(ty) = data.ty() {
-        //    if data.depth() as usize >= d && data.key() == self.hash() {
-        //        match ty {
-        //            NodeType::Exact => return data.pair(),
-        //            NodeType::Alpha => {
-        //                if data.eval() >= b {
-        //                    return data.pair();
-        //                }
-        //                alpha = alpha.max(data.eval());
-        //            }
-        //            NodeType::Beta => {
-        //                if data.eval() <= a && data.best().is_some() {
-        //                    return data.pair();
-        //                }
-        //                //beta = beta.min(data.eval());
-        //            }
-        //        }
-        //    }
-        //}
+        let mut beta: i16 = b;
+        let data: NodeData = tt.look_up(&self.hash());
+        if let Some(ty) = data.ty() {
+            if data.depth() as usize >= d && data.key() == self.hash() {
+                match ty {
+                    NodeType::Exact => return data.pair(),
+                    NodeType::Alpha => {
+                        if data.eval() >= b {
+                            return data.pair();
+                        }
+                        alpha = alpha.max(data.eval());
+                    }
+                    NodeType::Beta => {
+                        if data.eval() <= a && data.best().is_some() {
+                            return data.pair();
+                        }
+                        //beta = beta.min(data.eval());
+                    }
+                }
+            }
+        }
 
         let d = match self.is_king_in_check(self.side()) {
             true => d + 1,
@@ -123,7 +123,7 @@ impl ChessBoard {
         }
 
         //tranposition table keep-up
-        //tt.update_tt(self.hash(), best_value, best_move, a, b, d as u16);
+        tt.update_tt(self.hash(), best_value, best_move, a, b, d as u16);
         return (best_value, best_move);
     }
 
