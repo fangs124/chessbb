@@ -86,22 +86,23 @@ impl ChessBoard {
 
     //position fen r1b1kbnr/ppp2ppp/3p1q2/8/2BQP3/8/PPP2PPP/RNB1K2R w KQkq - 0 1 moves e1g1 f6f2 d4f2 g8h6 f2e1
     //FIXME this is kinda ugly, no attempt to check if move is legal
-    pub fn parse_move(&self, move_str: &str) -> ChessMove {
+    pub  fn parse_move(&self, move_str: &str) -> ChessMove {
         //eprintln!("move_str: {:?}", move_str);
         //eprintln!("&move_str[0..1]: {:?}", &move_str[0..1]);
         //eprintln!("&move_str[2..3]: {:?}", &move_str[2..3]);
+        let (source, target) =  (Square::parse(&move_str[0..=1]), Square::parse(&move_str[2..=3]));
         /* castling-moves */
-        match (Square::parse(&move_str[0..=1]), Square::parse(&move_str[2..=3]))  {
-            (Square::W_KING_SQUARE, Square::W_KINGSIDE_CASTLE_SQUARE)  => return ChessMove::W_KINGSIDE_CASTLE,
-            (Square::W_KING_SQUARE, Square::W_QUEENSIDE_CASTLE_SQUARE) => return ChessMove::W_QUEENSIDE_CASTLE,
-            (Square::B_KING_SQUARE, Square::B_KINGSIDE_CASTLE_SQUARE)  => return ChessMove::B_KINGSIDE_CASTLE,
-            (Square::B_KING_SQUARE, Square::B_QUEENSIDE_CASTLE_SQUARE) => return ChessMove::B_QUEENSIDE_CASTLE,
-            (source, target) => {
+        match (source, target, matches!(self.core.mailbox[source.to_usize()], Some((_,PieceType::King)))) {
+            (Square::W_KING_SQUARE, Square::W_KINGSIDE_CASTLE_SQUARE, true)  => return ChessMove::W_KINGSIDE_CASTLE,
+            (Square::W_KING_SQUARE, Square::W_QUEENSIDE_CASTLE_SQUARE, true) => return ChessMove::W_QUEENSIDE_CASTLE,
+            (Square::B_KING_SQUARE, Square::B_KINGSIDE_CASTLE_SQUARE, true)  => return ChessMove::B_KINGSIDE_CASTLE,
+            (Square::B_KING_SQUARE, Square::B_QUEENSIDE_CASTLE_SQUARE, true) => return ChessMove::B_QUEENSIDE_CASTLE,
+            (source, target, _) => {
                 /* promotion-moves */
                 if move_str.len() == 5 {
-                    let piece = match move_str.chars().nth(5) {
+                    let piece = match move_str.chars().nth(4) {
                         Some('q') => PieceType:: Queen,
-                        Some('k') => PieceType:: Knight,
+                        Some('n') => PieceType:: Knight,
                         Some('r') => PieceType:: Rook,
                         Some('b') => PieceType:: Bishop,
                         _ => panic!("invalid promotion piece"),

@@ -80,7 +80,7 @@ impl Square {
             "h3" => Square { data: 16 },
             "g3" => Square { data: 17 },
             "f3" => Square { data: 18 },
-            "e3" => Square { data: 10 },
+            "e3" => Square { data: 19 },
             "d3" => Square { data: 20 },
             "c3" => Square { data: 21 },
             "b3" => Square { data: 22 },
