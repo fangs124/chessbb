@@ -261,6 +261,7 @@ pub(crate) const fn is_same_col(source: Square, target: Square) -> bool {
 pub(crate) const fn is_same_row(source: Square, target: Square) -> bool {
    ROWS[source.to_usize()] == ROWS[target.to_usize()]
 }
+
 /* ==== labels ==== */
 
 /* indexing the 64-squares:
