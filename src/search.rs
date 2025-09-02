@@ -46,8 +46,6 @@ impl ChessBoard {
     //    best possible outcome for enemy assuming you played best
     // this implies the following bounds:
     // alpha <= eval <= beta
-    //#[rustfmt::skip]
-    //pub fn negamax(&mut self, a: i16, b: i16, d: usize, ply: usize, ev: &mut impl Evaluator) -> (i16, Option<ChessMove>) {
     pub fn negamax(
         &mut self,
         a: i16,
@@ -56,9 +54,11 @@ impl ChessBoard {
         ply: usize,
         ev: &mut impl Evaluator,
         tt: &mut TranspositionTable,
+        node_count: &mut usize,
+        pair: Option<(Vec<ChessMove>, GameState)>,
     ) -> (i16, Option<ChessMove>) {
+        *node_count += 1;
         let mut alpha: i16 = a;
-        let mut beta: i16 = b;
         let data: NodeData = tt.look_up(&self.hash());
         if let Some(ty) = data.ty() {
             if data.depth() as usize >= d && data.key() == self.hash() {
@@ -89,7 +89,7 @@ impl ChessBoard {
             return (ev.eval(&self), None);
         }
 
-        let (moves, game_state) = self.try_generate_moves();
+        let (moves, game_state) = pair.unwrap_or(self.try_generate_moves());
         if let GameState::Finished(state) = game_state {
             match state {
                 GameResult::WhiteWins | GameResult::BlackWins => {
@@ -105,7 +105,7 @@ impl ChessBoard {
 
         for chess_move in moves {
             let snapshot: crate::ChessBoardSnapshot = self.explore_state(chess_move);
-            let (score, next_move) = self.negated_negamax(-b, -alpha, d - 1, ply + 1, ev, tt);
+            let (score, next_move) = self.negated_negamax(-b, -alpha, d - 1, ply + 1, ev, tt, node_count, None);
             self.restore_state(snapshot);
 
             if score > best_value {
@@ -136,8 +136,10 @@ impl ChessBoard {
         ply: usize,
         ev: &mut impl Evaluator,
         tt: &mut TranspositionTable,
+        node_count: &mut usize,
+        pair: Option<(Vec<ChessMove>, GameState)>,
     ) -> (i16, Option<ChessMove>) {
-        negated_pair(self.negamax(a, b, d, ply, ev, tt))
+        negated_pair(self.negamax(a, b, d, ply, ev, tt, node_count, pair))
     }
 }
 
