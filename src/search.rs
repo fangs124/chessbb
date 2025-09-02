@@ -1,3 +1,5 @@
+use std::ops::Neg;
+
 use crate::{ChessBoard, ChessMove, GameResult, GameState, NodeData, NodeType, PieceType, Side, TranspositionTable};
 
 pub trait Evaluator {
@@ -9,6 +11,26 @@ pub trait Evaluator {
 pub struct MaterialEvaluator;
 
 pub const MATERIAL_EVAL: MaterialEvaluator = MaterialEvaluator {};
+
+pub struct ScoredMove(i16, Option<ChessMove>);
+
+impl Neg for ScoredMove {
+    type Output = ScoredMove;
+
+    fn neg(self) -> Self::Output {
+        Self(-self.0, self.1)
+    }
+}
+
+impl ScoredMove {
+    pub const fn new(a: i16, b: Option<ChessMove>) -> Self {
+        ScoredMove(a, b)
+    }
+
+    pub const fn unwrap(self) -> (i16, Option<ChessMove>) {
+        (self.0, self.1)
+    }
+}
 
 impl Evaluator for MaterialEvaluator {
     fn eval(&mut self, cb: &ChessBoard) -> i16 {
@@ -56,7 +78,7 @@ impl ChessBoard {
         tt: &mut TranspositionTable,
         node_count: &mut usize,
         pair: Option<(Vec<ChessMove>, GameState)>,
-    ) -> (i16, Option<ChessMove>) {
+    ) -> ScoredMove {
         *node_count += 1;
         let mut alpha: i16 = a;
         let data: NodeData = tt.look_up(&self.hash());
@@ -86,16 +108,16 @@ impl ChessBoard {
         };
 
         if d == 0 {
-            return (ev.eval(&self), None);
+            return ScoredMove(ev.eval(&self), None);
         }
 
         let (moves, game_state) = pair.unwrap_or(self.try_generate_moves());
         if let GameState::Finished(state) = game_state {
             match state {
                 GameResult::WhiteWins | GameResult::BlackWins => {
-                    return (((i16::MIN + 2) / 2) + (ply as i16), None); //TODO determine if +d or -d or something else should be used here.
+                    return ScoredMove(((i16::MIN + 2) / 2) + (ply as i16), None); //TODO determine if +d or -d or something else should be used here.
                 }
-                GameResult::Draw => return (0, None),
+                GameResult::Draw => return ScoredMove::new(0, None),
             }
         }
 
@@ -105,7 +127,7 @@ impl ChessBoard {
 
         for chess_move in moves {
             let snapshot: crate::ChessBoardSnapshot = self.explore_state(chess_move);
-            let (score, next_move) = self.negated_negamax(-b, -alpha, d - 1, ply + 1, ev, tt, node_count, None);
+            let ScoredMove(score, next_move) = -self.negamax(-b, -alpha, d - 1, ply + 1, ev, tt, node_count, None);
             self.restore_state(snapshot);
 
             if score > best_value {
@@ -124,28 +146,8 @@ impl ChessBoard {
 
         //tranposition table keep-up
         tt.update_tt(self.hash(), best_value, best_move, a, b, d as u16);
-        return (best_value, best_move);
+        return ScoredMove(best_value, best_move);
     }
-
-    #[inline(always)]
-    fn negated_negamax(
-        &mut self,
-        a: i16,
-        b: i16,
-        d: usize,
-        ply: usize,
-        ev: &mut impl Evaluator,
-        tt: &mut TranspositionTable,
-        node_count: &mut usize,
-        pair: Option<(Vec<ChessMove>, GameState)>,
-    ) -> (i16, Option<ChessMove>) {
-        negated_pair(self.negamax(a, b, d, ply, ev, tt, node_count, pair))
-    }
-}
-
-#[inline(always)]
-fn negated_pair(pair: (i16, Option<ChessMove>)) -> (i16, Option<ChessMove>) {
-    (-pair.0, pair.1)
 }
 
 #[allow(non_camel_case_types)]

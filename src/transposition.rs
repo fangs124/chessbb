@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use crate::{ChessMove, zobrist::ZobristHash};
+use crate::{ChessMove, search::ScoredMove, zobrist::ZobristHash};
 
 //16MB for stc, 128MB for ltc
 //128MB is 1073741824 bits
@@ -140,8 +140,8 @@ impl NodeData {
     }
 
     #[inline(always)]
-    pub const fn pair(&self) -> (i16, Option<ChessMove>) {
-        return (self.eval, self.best);
+    pub const fn pair(&self) -> ScoredMove {
+        return ScoredMove::new(self.eval, self.best);
     }
 
     #[inline(always)]
