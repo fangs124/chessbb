@@ -79,7 +79,6 @@ impl ChessBoard {
         node_count: &mut usize,
         pair: Option<(Vec<ChessMove>, GameState)>,
     ) -> ScoredMove {
-        *node_count += 1;
         let mut alpha: i16 = a;
         let data: NodeData = tt.look_up(&self.hash());
         if let Some(ty) = data.ty() {
@@ -127,6 +126,7 @@ impl ChessBoard {
 
         for chess_move in moves {
             let snapshot: crate::ChessBoardSnapshot = self.explore_state(chess_move);
+            *node_count += 1; //apparently this is the accepted way to count nps
             let ScoredMove(score, next_move) = -self.negamax(-b, -alpha, d - 1, ply + 1, ev, tt, node_count, None);
             self.restore_state(snapshot);
 
