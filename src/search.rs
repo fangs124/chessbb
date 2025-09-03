@@ -1,6 +1,9 @@
 use std::ops::Neg;
 
-use crate::{ChessBoard, ChessMove, GameResult, GameState, NodeData, NodeType, PieceType, Side, TranspositionTable};
+use crate::{
+    ChessBoard, ChessBoardSnapshot, ChessMove, GameResult, GameState, NodeData, NodeType, PieceType, Side,
+    TranspositionTable,
+};
 
 pub trait Evaluator {
     //i16 is used here as a fixed-precision evaluation out of 1000
@@ -125,22 +128,21 @@ impl ChessBoard {
         let mut best_move: Option<ChessMove> = None;
 
         for chess_move in moves {
-            let snapshot: crate::ChessBoardSnapshot = self.explore_state(chess_move);
+            let snapshot: ChessBoardSnapshot = self.explore_state(chess_move);
             *node_count += 1; //apparently this is the accepted way to count nps
-            let ScoredMove(score, next_move) = -self.negamax(-b, -alpha, d - 1, ply + 1, ev, tt, node_count, None);
+            let ScoredMove(value, next_move) = -self.negamax(-b, -alpha, d - 1, ply + 1, ev, tt, node_count, None);
             self.restore_state(snapshot);
 
-            if score > best_value {
-                best_value = score;
+            if value > best_value {
+                best_value = value;
                 best_move = Some(chess_move);
             }
 
-            if score > alpha {
-                alpha = score;
-            }
-
-            if score >= b {
-                break;
+            if value > alpha {
+                alpha = value;
+                if alpha >= b {
+                    break;
+                }
             }
         }
 
