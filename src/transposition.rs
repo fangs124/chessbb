@@ -38,16 +38,20 @@ pub enum NodeType {
 //can make this generic if necessary. otherwise it adds complication to the code right now
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TranspositionTable {
-    data: Box<[NodeData]>,
+    data: Box<[NodeData; DEFAULT_SIZE]>,
 }
 
-//const foo: usize = std::mem::size_of::<NodeData>();
+//const foo: usize = size_of::<TranspositionTable>();
+//const foo: usize = size_of::<NodeData>();
+
 const DEFAULT_SIZE: usize = 1 << 22;
 
 impl TranspositionTable {
     #[inline(always)]
     pub fn new() -> Self {
-        return TranspositionTable { data: vec![NodeData::const_default(); DEFAULT_SIZE].into_boxed_slice() };
+        //this is ugly
+        return TranspositionTable { data: vec![NodeData::default(); DEFAULT_SIZE].try_into().unwrap() };
+        //return TranspositionTable { data: [NodeData::default(); DEFAULT_SIZE] };
     }
 
     #[rustfmt::skip]
