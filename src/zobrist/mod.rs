@@ -1,3 +1,5 @@
+use bytemuck::NoUninit;
+
 use crate::bitboard::*;
 use crate::chessmove::Castling;
 use crate::{ChessBoardCore, square::Square};
@@ -6,7 +8,8 @@ pub mod bit_ops;
 
 include!("data/data.rs");
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, NoUninit)]
+#[repr(transparent)]
 pub struct ZobristHash {
     value: u64,
 }

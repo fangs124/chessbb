@@ -18,8 +18,8 @@ use crate::{
 pub use crate::bitboard::{PieceType, Side, ChessPiece};
 pub use crate::chessmove::ChessMove;
 pub use crate::square::Square;
-pub use crate::search::{Evaluator, MATERIAL_EVAL};
-pub use crate::transposition::{TranspositionTable, NodeData, NodeType};
+pub use crate::search::{Evaluator, NegamaxData, MATERIAL_EVAL};
+pub use crate::transposition::{AtomicTranspositionTable, TranspositionTable, PositionData, NodeType};
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GameState {
     Finished(GameResult),
@@ -76,6 +76,19 @@ impl ChessBoard {
         let core: ChessBoardCore = self.core.clone();
         self.update_state(chess_move);
         return ChessBoardSnapshot{ core, hash: self.core.hash() };
+    }
+
+    #[inline(always)]
+    pub fn try_explore_state(&mut self, chess_move: ChessMove) -> Option<ChessBoardSnapshot> {
+        if let Some(core) = self.core.try_update_state(chess_move) {
+            let hash = core.hash();
+            let snapshot = ChessBoardSnapshot{ core: self.core, hash };
+            self.core = core;
+            self.zt.add(hash);
+            return Some(snapshot);
+        }
+
+        return None;
     }
 
     #[inline(always)]
@@ -643,7 +656,7 @@ impl ChessBoardCore {
         let rook_square: Square;
         let castling_mask: BitBoard;
         let castling_index: usize;
-        let blockers = self.blockers();
+        let blockers: BitBoard = self.blockers();
 
         match side {
             Side::White => {

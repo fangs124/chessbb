@@ -4,10 +4,81 @@ use super::chessmove::*;
 use super::*;
 
 impl ChessBoardCore {
+    //positively tests if a move is illegal
+    fn is_move_illegal(&self, chess_move: ChessMove) -> bool {
+        //move types: normal, castle, enpassant, promotion
+        let source: Square = chess_move.source();
+        let target: Square = chess_move.target();
+
+        //check if piece is there
+        if let Some((source_side, source_piece_type)) = self.mailbox[source.to_usize()] {
+            let move_type = chess_move.move_type();
+            if self.side() != source_side {
+                return true;
+            }
+
+            //check if castling is legal
+            if let MoveType::Castle(castling) = move_type {
+                match castling {
+                    Castling::Kingside(side) => return self.is_able_kingside_castle(side),
+                    Castling::Queenside(side) => return self.is_able_queenside_castle(side),
+                }
+            }
+
+            //check if piece can attack target
+            let blockers: BitBoard = self.blockers();
+            let (friends, enemies) = match source_side {
+                Side::White => (self.white_blockers(), self.black_blockers()),
+                Side::Black => (self.black_blockers(), self.white_blockers()),
+            };
+
+            let targets: BitBoard = match source_piece_type {
+                PieceType::King => get_king_attack(source).bit_and(&friends.bit_not()),
+                PieceType::Queen => get_queen_attack(source, blockers).bit_and(&friends.bit_not()),
+                PieceType::Knight => get_knight_attack(source).bit_and(&friends.bit_not()),
+                PieceType::Bishop => get_bishop_attack(source, blockers).bit_and(&friends.bit_not()),
+                PieceType::Rook => get_rook_attack(source, blockers).bit_and(&friends.bit_not()),
+                PieceType::Pawn => match source_side {
+                    Side::White => get_w_pawn_attack(source).bit_and(&enemies),
+                    Side::Black => get_b_pawn_attack(source).bit_and(&enemies),
+                },
+            };
+
+            //check if enpassant is ok
+            if targets.nth_is_zero(target) || (move_type == MoveType::EnPassant && self.enpassant_bb.nth_is_zero(target)) {
+                return true;
+            }
+        } else {
+            return true;
+        }
+        return false;
+    }
+
+    //returns ChessBoardSnapshot if move was legal, otherwise returns None. //TODO might need to debug this
+    pub fn try_update_state(&self, chess_move: ChessMove) -> Option<ChessBoardCore> {
+        if self.is_move_illegal(chess_move) {
+            return None;
+        }
+        let mut chessboard = self.clone();
+        chessboard.update_state(chess_move);
+        if chessboard.is_king_in_check(chessboard.side()) {
+            return None;
+        }
+        return Some(chessboard);
+    }
+
     pub fn update_state(&mut self, chess_move: ChessMove) {
         let mut enpassant_bb: BitBoard = BitBoard::ZERO;
         let source: Square = chess_move.source();
         let target: Square = chess_move.target();
+        assert!(
+            self.mailbox[source.to_usize()].is_some(),
+            "position:\n\r{}\n\rposition:\n\r{}\n\rchess_move:{:?}\n\rchess_move:{:?}\n\r",
+            self,
+            self,
+            chess_move,
+            chess_move
+        );
         let source_piece = self.mailbox[source.to_usize()].expect("update_state error: source mailbox is None");
         let source_index = cp_index(source_piece);
         let target_piece = self.mailbox[target.to_usize()];
@@ -16,13 +87,7 @@ impl ChessBoardCore {
             Side::White => 6,
             Side::Black => 0,
         };
-        assert!(
-            self.piece_bbs[enemy_king_index].nth_is_zero(target),
-            "position:\n\r{}\n\rposition:\n\r{}\n\rposition:\n\r{}\n\r",
-            self,
-            self,
-            self
-        );
+        //assert!(self.piece_bbs[enemy_king_index].nth_is_zero(target), "position:\n\r{}\n\rposition:\n\r{}\n\rposition:\n\r{}\n\r", self, self, self);
         let mut current_hash = self.hash();
         current_hash ^= ZobristHash::compute_enpassant_hash(self.enpassant_bb);
 
@@ -240,10 +305,7 @@ impl ChessBoardCore {
                 }
 
                 assert!(self.piece_bbs[enemy_pawn_index].nth_is_not_zero(enemy_pawn_square));
-                assert!(
-                    self.mailbox[enemy_pawn_square.to_usize()] == opt_cpt!(p)
-                        || self.mailbox[enemy_pawn_square.to_usize()] == opt_cpt!(P)
-                );
+                assert!(self.mailbox[enemy_pawn_square.to_usize()] == opt_cpt!(p) || self.mailbox[enemy_pawn_square.to_usize()] == opt_cpt!(P));
 
                 self.piece_bbs[enemy_pawn_index].pop_bit(enemy_pawn_square);
                 current_hash ^= ZobristHash::piece_hash(enemy_pawn_square, enemy_piece);
@@ -412,8 +474,8 @@ impl ChessBoardCore {
             Side::Black => (self.black_blockers(), self.white_blockers()),
         };
 
-        let mut moves: Vec<ChessMove> = Vec::new();
-        let mut targets = match piece_type {
+        let mut moves: Vec<ChessMove> = Vec::with_capacity(40);
+        let mut targets: BitBoard = match piece_type {
             PieceType::King => get_king_attack(source).bit_and(&friends.bit_not()),
             PieceType::Queen => get_queen_attack(source, blockers).bit_and(&friends.bit_not()),
             PieceType::Knight => get_knight_attack(source).bit_and(&friends.bit_not()),
@@ -482,12 +544,9 @@ impl ChessBoardCore {
                 let pinner = pinners.lsb_square().unwrap();
                 let piece_type = self.mailbox[pinner.to_usize()].unwrap();
 
-                is_pinned_diag |= is_same_diag_tri(source, pinner, king_square)
-                    && matches!(piece_type, (_, PieceType::Bishop) | (_, PieceType::Queen));
-                is_pinned_vert |= is_same_col_tri(source, pinner, king_square)
-                    && matches!(piece_type, (_, PieceType::Rook) | (_, PieceType::Queen));
-                is_pinned_horz |= is_same_row_tri(source, pinner, king_square)
-                    && matches!(piece_type, (_, PieceType::Rook) | (_, PieceType::Queen));
+                is_pinned_diag |= is_same_diag_tri(source, pinner, king_square) && matches!(piece_type, (_, PieceType::Bishop) | (_, PieceType::Queen));
+                is_pinned_vert |= is_same_col_tri(source, pinner, king_square) && matches!(piece_type, (_, PieceType::Rook) | (_, PieceType::Queen));
+                is_pinned_horz |= is_same_row_tri(source, pinner, king_square) && matches!(piece_type, (_, PieceType::Rook) | (_, PieceType::Queen));
                 pinners.pop_bit(pinner);
             }
         }
@@ -553,8 +612,7 @@ impl ChessBoardCore {
                 debug_assert!(self.check_bb.count_ones() <= 1);
                 //can only attack a square if not in check or attack blocks check
                 if check_mask.is_zero() || (check_mask.nth_is_not_zero(attack)) {
-                    let is_attack_pinner =
-                        pinners.nth_is_not_zero(attack) && is_same_diag_tri(source, attack, king_square);
+                    let is_attack_pinner = pinners.nth_is_not_zero(attack) && is_same_diag_tri(source, attack, king_square);
 
                     //can only attack a square if not pinned or capturing piece pinning the pawn
                     if pin_mask.is_zero() || is_attack_pinner {
@@ -585,9 +643,7 @@ impl ChessBoardCore {
                 // . . . x .
 
                 //255u64 = 0b11111111u64 is an entire row
-                let special_row_bb = BitBoard::new(
-                    (255u64 << 8 * ROWS[source.to_usize()]) & (255u64 << 8 * (ROWS[king_square.to_usize()])),
-                );
+                let special_row_bb = BitBoard::new((255u64 << 8 * ROWS[source.to_usize()]) & (255u64 << 8 * (ROWS[king_square.to_usize()])));
                 let (enemy_rook_index, enemy_queen_index, enemy_pawn_index, enemy_pawn_square) = match side {
                     Side::White => (cpt_index!(r), cpt_index!(q), cpt_index!(p), Square::new(attack.to_u8() - 8u8)),
                     Side::Black => (cpt_index!(R), cpt_index!(Q), cpt_index!(P), Square::new(attack.to_u8() + 8u8)),
@@ -751,8 +807,7 @@ impl ChessBoardCore {
                 _ => panic!(),
             };
 
-            let relevant_mask: BitBoard =
-                RAYS[king_square.to_usize()][possible_pinner.to_usize()].bit_and(&attack_mask);
+            let relevant_mask: BitBoard = RAYS[king_square.to_usize()][possible_pinner.to_usize()].bit_and(&attack_mask);
             let enemy_blockers: BitBoard = relevant_mask.bit_and(&enemies);
             let possible_pinned: BitBoard = relevant_mask.bit_and(&friends);
 

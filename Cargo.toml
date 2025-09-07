@@ -9,10 +9,14 @@ debug = 1
 
 [profile.release]
 opt-level = 3
-
+debug = 1
 
 [lints.clippy]
 zero_prefixed_literal = "allow"
 bool_comparison = "allow"
 match_like_matches_macro = "allow"
 collapsible_if = "allow"
+
+[dependencies]
+bytemuck = { version = "1.23", features = ["derive"] }
+atomic = "0.6"

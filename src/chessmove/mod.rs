@@ -185,27 +185,23 @@ impl ChessMove {
         ];
     }
 
-    pub(crate) const W_KINGSIDE_CASTLE: ChessMove = ChessMove::new(
-        Square::W_KING_SQUARE,
-        Square::W_KINGSIDE_CASTLE_SQUARE,
-        MoveType::Castle(Castling::Kingside(Side::White)),
-    );
+    pub(crate) const W_KINGSIDE_CASTLE: ChessMove =
+        ChessMove::new(Square::W_KING_SQUARE, Square::W_KINGSIDE_CASTLE_SQUARE, MoveType::Castle(Castling::Kingside(Side::White)));
 
-    pub(crate) const W_QUEENSIDE_CASTLE: ChessMove = ChessMove::new(
-        Square::W_KING_SQUARE,
-        Square::W_QUEENSIDE_CASTLE_SQUARE,
-        MoveType::Castle(Castling::Queenside(Side::White)),
-    );
+    pub(crate) const W_QUEENSIDE_CASTLE: ChessMove =
+        ChessMove::new(Square::W_KING_SQUARE, Square::W_QUEENSIDE_CASTLE_SQUARE, MoveType::Castle(Castling::Queenside(Side::White)));
 
-    pub(crate) const B_KINGSIDE_CASTLE: ChessMove = ChessMove::new(
-        Square::B_KING_SQUARE,
-        Square::B_KINGSIDE_CASTLE_SQUARE,
-        MoveType::Castle(Castling::Kingside(Side::Black)),
-    );
+    pub(crate) const B_KINGSIDE_CASTLE: ChessMove =
+        ChessMove::new(Square::B_KING_SQUARE, Square::B_KINGSIDE_CASTLE_SQUARE, MoveType::Castle(Castling::Kingside(Side::Black)));
 
-    pub(crate) const B_QUEENSIDE_CASTLE: ChessMove = ChessMove::new(
-        Square::B_KING_SQUARE,
-        Square::B_QUEENSIDE_CASTLE_SQUARE,
-        MoveType::Castle(Castling::Queenside(Side::Black)),
-    );
+    pub(crate) const B_QUEENSIDE_CASTLE: ChessMove =
+        ChessMove::new(Square::B_KING_SQUARE, Square::B_QUEENSIDE_CASTLE_SQUARE, MoveType::Castle(Castling::Queenside(Side::Black)));
 }
+
+// //trying to see if type-encoded chess move would be nice
+// pub struct _ChessMove {
+//     source: _Square,
+//     target: _Square,
+//     move_ty: MoveType,
+// }
+// pub enum _Square {} //suppose we enumerate all 64 squares
