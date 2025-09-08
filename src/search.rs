@@ -102,11 +102,11 @@ type AtomicTT = AtomicTranspositionTable;
 const NODE_CHECK_COUNT_LIMIT: usize = 1 << 6;
 
 impl ChessBoard {
-    pub fn negamax(&mut self, a: i16, b: i16, d: usize, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> ScoredMove {
+    pub fn negamax(&mut self, a: i16, b: i16, d: u16, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> ScoredMove {
         let mut alpha: i16 = a;
         let position_data: PositionData = tt.load(&self.hash(), Ordering::Relaxed);
         let mut tt_chess_move: Option<ChessMove> = None;
-        if position_data.depth() as usize >= d && position_data.is_valid(self.hash()) {
+        if position_data.depth() >= d && position_data.is_valid(self.hash()) {
             tt_chess_move = position_data.pair().1;
             match position_data.ty() {
                 NodeType::Exact => return position_data.pair(),

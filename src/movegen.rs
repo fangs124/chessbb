@@ -1,5 +1,3 @@
-use std::ops::BitAnd;
-
 use super::chessmove::*;
 use super::*;
 
@@ -12,20 +10,13 @@ impl ChessBoardCore {
         return false;
     }
 
-    pub(crate) fn mvv_lva_score(&self, chess_move: &ChessMove) -> Option<i16> {
-        match (self.is_move_capture(chess_move), chess_move.move_type()) {
-            (true, MoveType::EnPassant) => {
-                let shifted_target = match self.side() {
-                    Side::White => chess_move.target().to_usize() - 8,
-                    Side::Black => chess_move.target().to_usize() + 8,
-                };
-                return Some(self.mailbox[shifted_target].unwrap().1.value() - self.mailbox[chess_move.source().to_usize()].unwrap().1.value());
-            }
-            (true, _) => {
-                return Some(self.mailbox[chess_move.target().to_usize()].unwrap().1.value() - self.mailbox[chess_move.source().to_usize()].unwrap().1.value());
-            }
-            (false, _) => return None,
-        }
+    pub(crate) fn mvv_lva_score(&self, chess_move: &ChessMove) -> i16 {
+        let source_score = self.mailbox[chess_move.source().to_usize()].unwrap().1.value();
+        let target_score = match self.mailbox[chess_move.source().to_usize()] {
+            Some(chess_piece) => chess_piece.1.value(),
+            None => 0,
+        };
+        return target_score - source_score;
     }
 
     pub(crate) fn sort_moves(&self, chess_moves: &mut Vec<ChessMove>) {
