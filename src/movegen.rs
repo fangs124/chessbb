@@ -416,8 +416,7 @@ impl ChessBoardCore {
     }
 
     pub fn generate_moves(&self) -> Vec<ChessMove> {
-        let mut captures: Vec<ChessMove> = Vec::with_capacity(20);
-        let mut moves: Vec<ChessMove> = Vec::with_capacity(20);
+        let mut moves: Vec<ChessMove> = Vec::new();
         let mut king_moves: Vec<ChessMove> = Vec::new();
         let side = self.side_to_move;
 
@@ -458,7 +457,7 @@ impl ChessBoardCore {
                         }
 
                         /* moves and attacks */
-                        self.calculate_moves(source, piece_type, &mut king_moves, &mut captures);
+                        king_moves.append(&mut self.calculate_moves(source, piece_type));
                         sources.pop_bit(source);
                     }
 
@@ -469,13 +468,13 @@ impl ChessBoardCore {
                             continue;
                         }
                         /* moves and attacks */
-                        self.calculate_moves(source, piece_type, &mut moves, &mut captures);
+                        moves.append(&mut self.calculate_moves(source, piece_type));
                         sources.pop_bit(source);
                     }
 
                     _ => {
                         /* moves and attacks */
-                        self.calculate_moves(source, piece_type, &mut moves, &mut captures);
+                        moves.append(&mut self.calculate_moves(source, piece_type));
                         sources.pop_bit(source);
                     }
                 }
@@ -485,15 +484,14 @@ impl ChessBoardCore {
                 // sources.pop_bit(source);
             }
         }
-        captures.append(&mut moves);
-        captures.append(&mut king_moves);
-        return captures;
+        moves.append(&mut king_moves);
+        return moves;
     }
 
-    fn calculate_moves(&self, source: Square, piece_type: PieceType, moves: &mut Vec<ChessMove>, captures: &mut Vec<ChessMove>) {
+    fn calculate_moves(&self, source: Square, piece_type: PieceType) -> Vec<ChessMove> {
         //pawn rules are complex, best handled separately, use calculate_pawn_moves()
         if matches!(piece_type, PieceType::Pawn) {
-            moves.append(&mut self.calculate_pawn_moves(source));
+            return self.calculate_pawn_moves(source);
         }
 
         let check_mask = self.check_mask;
@@ -504,6 +502,7 @@ impl ChessBoardCore {
             Side::Black => (self.black_blockers(), self.white_blockers()),
         };
 
+        let mut moves: Vec<ChessMove> = Vec::with_capacity(40);
         let mut targets: BitBoard = match piece_type {
             PieceType::King => get_king_attack(source).bit_and(&friends.bit_not()),
             PieceType::Queen => get_queen_attack(source, blockers).bit_and(&friends.bit_not()),
@@ -542,12 +541,10 @@ impl ChessBoardCore {
             };
 
             //append moves
-            match self.mailbox[target.to_usize()].is_some() {
-                true => captures.push(ChessMove::new(source, target, MoveType::Normal)),
-                false => moves.push(ChessMove::new(source, target, MoveType::Normal)),
-            }
+            moves.push(ChessMove::new(source, target, MoveType::Normal));
             targets.pop_bit(target);
         }
+        return moves;
     }
 
     fn calculate_pawn_moves(&self, source: Square) -> Vec<ChessMove> {
