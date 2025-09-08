@@ -136,7 +136,7 @@ impl ChessBoard {
             return ScoredMove(ev.eval(&self), None);
         }
 
-        let (moves, game_state) = data.get_pair_or(self.try_generate_moves());
+        let (mut moves, game_state) = data.get_pair_or(self.try_generate_moves());
         if let GameState::Finished(state) = game_state {
             match state {
                 GameResult::WhiteWins | GameResult::BlackWins => {
@@ -146,7 +146,6 @@ impl ChessBoard {
             }
         }
 
-        //TODO sort moves here
         let mut best_value: i16 = i16::MIN + 1;
         let mut best_move: Option<ChessMove> = None;
 
@@ -161,6 +160,10 @@ impl ChessBoard {
             if let Some(snapshot) = self.try_explore_state(chess_move) {
                 data.node_count += 1; //apparently this is the accepted way to count nps
                 data.node_check_count += 1;
+                //let depth = match self.core.is_move_capture(&chess_move) {
+                //    true => d,
+                //    false => d - 1,
+                //};
                 let ScoredMove(value, next_move) = -self.negamax(-b, -alpha, d - 1, ev, data, tt.clone());
                 self.restore_state(snapshot);
                 if value > best_value {
@@ -174,6 +177,8 @@ impl ChessBoard {
             }
         }
 
+        //TODO sort moves here
+        self.core.sort_moves(&mut moves);
         for chess_move in moves {
             if let Some(time_data) = data.time_data {
                 if data.node_check_count >= NODE_CHECK_COUNT_LIMIT {
@@ -186,6 +191,10 @@ impl ChessBoard {
             let snapshot: ChessBoardSnapshot = self.explore_state(chess_move);
             data.node_count += 1; //apparently this is the accepted way to count nps
             data.node_check_count += 1;
+            //let depth = match self.core.is_move_capture(&chess_move) {
+            //    true => d,
+            //    false => d - 1,
+            //};
             let ScoredMove(value, next_move) = -self.negamax(-b, -alpha, d - 1, ev, data, tt.clone());
             self.restore_state(snapshot);
 

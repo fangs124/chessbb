@@ -1,4 +1,6 @@
+use std::cmp::Ordering;
 use std::fmt::Debug;
+use std::fmt::Display;
 
 use crate::PieceType;
 use crate::bitboard::*;
@@ -51,26 +53,25 @@ pub struct ChessMove {
     data: u16,
 }
 
-//needed to sort chess moves
-impl Ord for ChessMove {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+pub trait LexOrd: Display {
+    fn lex_cmp(&self, other: &Self) -> Ordering;
+}
+
+impl LexOrd for ChessMove {
+    fn lex_cmp(&self, other: &Self) -> Ordering {
         self.print_move().cmp(&other.print_move())
     }
 }
 
-//needed to sort chess moves
-impl PartialOrd for ChessMove {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
+impl Display for ChessMove {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self.move_type() {
+            MoveType::Promotion(piece) => format!("{}{}{}", SQUARE_SYM[self.source().to_usize()], SQUARE_SYM[self.target().to_usize()], piece.to_uci_char()),
+            _ => format!("{}{}", SQUARE_SYM[self.source().to_usize()], SQUARE_SYM[self.target().to_usize()]),
+        };
+        write!(f, "{}", s)
     }
 }
-
-//impl Display for ChessMove {
-//    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//        let s = self.print_move();
-//        write!(f, "{}", s)
-//    }
-//}
 
 //impl Debug for ChessMove {
 //    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -95,6 +96,15 @@ pub(crate) enum Castling {
 }
 
 impl ChessMove {
+    #[inline(always)]
+    pub fn print_move(&self) -> String {
+        if let MoveType::Promotion(piece) = self.move_type() {
+            return format!("{}{}{}", SQUARE_SYM[self.source().to_usize()], SQUARE_SYM[self.target().to_usize()], piece.to_uci_char());
+        } else {
+            return format!("{}{}", SQUARE_SYM[self.source().to_usize()], SQUARE_SYM[self.target().to_usize()]);
+        }
+    }
+
     #[inline(always)]
     pub(crate) const fn source(&self) -> Square {
         Square::new((self.data & 0b000000_111111u16) as u8)
