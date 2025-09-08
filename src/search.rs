@@ -102,11 +102,11 @@ type AtomicTT = AtomicTranspositionTable;
 const NODE_CHECK_COUNT_LIMIT: usize = 1 << 6;
 
 impl ChessBoard {
-    pub fn negamax(&mut self, a: i16, b: i16, d: u16, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> ScoredMove {
+    pub fn negamax(&mut self, a: i16, b: i16, d: usize, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> ScoredMove {
         let mut alpha: i16 = a;
         let position_data: PositionData = tt.load(&self.hash(), Ordering::Relaxed);
         let mut tt_chess_move: Option<ChessMove> = None;
-        if position_data.depth() >= d && position_data.is_valid(self.hash()) {
+        if position_data.depth() as usize >= d && position_data.is_valid(self.hash()) {
             tt_chess_move = position_data.pair().1;
             match position_data.ty() {
                 NodeType::Exact => return position_data.pair(),
@@ -136,7 +136,7 @@ impl ChessBoard {
             return ScoredMove(ev.eval(&self), None);
         }
 
-        let (mut moves, game_state) = data.get_pair_or(self.try_generate_moves());
+        let (moves, game_state) = data.get_pair_or(self.try_generate_moves());
         if let GameState::Finished(state) = game_state {
             match state {
                 GameResult::WhiteWins | GameResult::BlackWins => {
@@ -146,6 +146,7 @@ impl ChessBoard {
             }
         }
 
+        //TODO sort moves here
         let mut best_value: i16 = i16::MIN + 1;
         let mut best_move: Option<ChessMove> = None;
 
@@ -160,10 +161,6 @@ impl ChessBoard {
             if let Some(snapshot) = self.try_explore_state(chess_move) {
                 data.node_count += 1; //apparently this is the accepted way to count nps
                 data.node_check_count += 1;
-                //let depth = match self.core.is_move_capture(&chess_move) {
-                //    true => d,
-                //    false => d - 1,
-                //};
                 let ScoredMove(value, next_move) = -self.negamax(-b, -alpha, d - 1, ev, data, tt.clone());
                 self.restore_state(snapshot);
                 if value > best_value {
@@ -177,8 +174,6 @@ impl ChessBoard {
             }
         }
 
-        //TODO sort moves here
-        self.core.sort_moves(&mut moves);
         for chess_move in moves {
             if let Some(time_data) = data.time_data {
                 if data.node_check_count >= NODE_CHECK_COUNT_LIMIT {
@@ -191,10 +186,6 @@ impl ChessBoard {
             let snapshot: ChessBoardSnapshot = self.explore_state(chess_move);
             data.node_count += 1; //apparently this is the accepted way to count nps
             data.node_check_count += 1;
-            //let depth = match self.core.is_move_capture(&chess_move) {
-            //    true => d,
-            //    false => d - 1,
-            //};
             let ScoredMove(value, next_move) = -self.negamax(-b, -alpha, d - 1, ev, data, tt.clone());
             self.restore_state(snapshot);
 

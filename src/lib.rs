@@ -16,11 +16,10 @@ use crate::{
 
 /* re-export */
 pub use crate::bitboard::{PieceType, Side, ChessPiece};
-pub use crate::chessmove::{ChessMove, LexOrd};
+pub use crate::chessmove::ChessMove;
 pub use crate::square::Square;
-pub use crate::search::{Evaluator, NegamaxData, MATERIAL_EVAL, MaterialEvaluator};
+pub use crate::search::{Evaluator, NegamaxData, MATERIAL_EVAL};
 pub use crate::transposition::{AtomicTranspositionTable, TranspositionTable, PositionData, NodeType};
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GameState {
     Finished(GameResult),
@@ -143,20 +142,14 @@ impl ChessBoard {
     //    return self.core.generate_moves();
     //}
 
-    //pub fn state(&self) -> GameState {
-    //    if self.generate_moves().len() != 0 {
-    //        return GameState::Ongoing;
-    //    } else if self.hash_count(self.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
-    //        return GameState::Finished(GameResult::Draw);
-    //    } else if self.is_king_in_check(Side::White) {
-    //        return GameState::Finished(GameResult::BlackWins);
-    //    } else if self.is_king_in_check(Side::Black) {
-    //        return GameState::Finished(GameResult::WhiteWins);
-    //    } else { //stalemate
-    //        return GameState::Finished(GameResult::Draw);
+    //TODO this would introduce rand dependence
+    //#[inline(always)]
+    //pub fn random_move(&self) -> ChessMove {
+    //    if self.zobrist_table.count_hash(self.core.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
+    //        panic!("random_move error: can not generate random move!");
     //    }
+    //    return self.core.generate_moves();
     //}
-
 
     pub fn try_generate_moves(&self) -> (Vec<ChessMove>, GameState) {
         if self.zt.count_hash(self.core.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
@@ -173,6 +166,22 @@ impl ChessBoard {
             return (moves, GameState::Finished(GameResult::Draw));
         }
     }
+    
+    //TODO calling generate_moves() here is expensive, fix
+    //pub fn state(&self) -> GameState {
+    //    if self.generate_moves().len() != 0 {
+    //        return GameState::Ongoing;
+    //    } else if self.hash_count(self.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
+    //        return GameState::Finished(GameResult::Draw);
+    //    } else if self.is_king_in_check(Side::White) {
+    //        return GameState::Finished(GameResult::BlackWins);
+    //    } else if self.is_king_in_check(Side::Black) {
+    //        return GameState::Finished(GameResult::WhiteWins);
+    //    } else { //stalemate
+    //        return GameState::Finished(GameResult::Draw);
+    //    }
+    //}
+    
 
     #[inline(always)]
     pub fn mailbox_iterator(&self) -> std::slice::Iter<'_, Option<(bitboard::Side, bitboard::PieceType)>> {
@@ -222,6 +231,7 @@ impl ChessBoard {
     //pub fn update_tt(&mut self, value: i16, chess_move:Option<ChessMove>, a: i16, b:i16, d:u16) {
     //    self.tt.store(self.hash(), d, value, Some(NodeData::value_type(value, a, b)), chess_move);
     //}
+
 }
 
 // note: castle_bools[] = [white-king  side castle,

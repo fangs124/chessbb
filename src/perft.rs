@@ -1,5 +1,7 @@
 use crate::{
     ChessBoard, ChessBoardCore,
+    bitboard::SQUARE_SYM,
+    chessmove::{ChessMove, MoveType},
     zobrist::ZobristTable,
 };
 
@@ -25,6 +27,22 @@ impl ChessBoardCore {
             zobrist_table.remove_last(current_hash);
         }
         return total;
+    }
+}
+
+//FIXME wtf is this
+impl ChessMove {
+    pub fn print_move(&self) -> String {
+        if let MoveType::Promotion(piece) = self.move_type() {
+            return format!(
+                "{}{}{}",
+                SQUARE_SYM[self.source().to_usize()],
+                SQUARE_SYM[self.target().to_usize()],
+                piece.to_uci_char()
+            );
+        } else {
+            return format!("{}{}", SQUARE_SYM[self.source().to_usize()], SQUARE_SYM[self.target().to_usize()]);
+        }
     }
 }
 
