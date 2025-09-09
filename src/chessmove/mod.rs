@@ -51,17 +51,13 @@ pub struct ChessMove {
     data: u16,
 }
 
-//needed to sort chess moves
-impl Ord for ChessMove {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.print_move().cmp(&other.print_move())
-    }
+pub trait LexiOrd {
+    fn lexi_cmp(&self, other: &Self) -> std::cmp::Ordering;
 }
-
 //needed to sort chess moves
-impl PartialOrd for ChessMove {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
+impl LexiOrd for ChessMove {
+    fn lexi_cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.print_move().cmp(&other.print_move())
     }
 }
 
@@ -95,6 +91,14 @@ pub(crate) enum Castling {
 }
 
 impl ChessMove {
+    pub fn print_move(&self) -> String {
+        if let MoveType::Promotion(piece) = self.move_type() {
+            return format!("{}{}{}", SQUARE_SYM[self.source().to_usize()], SQUARE_SYM[self.target().to_usize()], piece.to_uci_char());
+        } else {
+            return format!("{}{}", SQUARE_SYM[self.source().to_usize()], SQUARE_SYM[self.target().to_usize()]);
+        }
+    }
+
     #[inline(always)]
     pub(crate) const fn source(&self) -> Square {
         Square::new((self.data & 0b000000_111111u16) as u8)

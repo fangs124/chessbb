@@ -28,7 +28,7 @@ fn old_main() {
         chessgame.update_state(chessmove);
     }
     let (mut moves, _) = chessgame.try_generate_moves();
-    moves.sort();
+    moves.sort_by(LexiOrd::lexi_cmp);
 
     //old test
     /*
@@ -165,7 +165,7 @@ fn old_main() {
         let total = chessgame.perft_count(depth);
         let elapsed = now.elapsed();
         let (mut moves, _) = chessgame.try_generate_moves();
-        moves.sort();
+        moves.sort_by(LexiOrd::lexi_cmp);
         let mut result_str_vec = Vec::<String>::new();
 
         for chessmove in moves {
@@ -224,8 +224,7 @@ fn perft_test(skip_to: Option<usize>) {
         for section in sections {
             let now: Instant = Instant::now();
             let section_vec: Vec<_> = section.split_ascii_whitespace().collect();
-            let depth: usize =
-                section_vec[0].chars().filter(|x| x.is_ascii_digit()).collect::<String>().parse().unwrap();
+            let depth: usize = section_vec[0].chars().filter(|x| x.is_ascii_digit()).collect::<String>().parse().unwrap();
             let result_count: u64 = section_vec[1].parse().unwrap();
             let total_count: u64 = chessgame.perft_count(depth); //here
             elapsed_total += now.elapsed();
@@ -235,9 +234,7 @@ fn perft_test(skip_to: Option<usize>) {
                 false => "Error!",
             };
             if result_str == "Error!" {
-                error_vec.push(format!(
-                    "start_fen: {start_fen}\ndepth: {depth}, result_count: {result_count}, total_count: {total_count}, {result_str}"
-                ))
+                error_vec.push(format!("start_fen: {start_fen}\ndepth: {depth}, result_count: {result_count}, total_count: {total_count}, {result_str}"))
             }
             println!("depth: {depth}, result_count: {result_count}, total_count: {total_count}, {result_str}");
             node_count += total_count;
@@ -293,8 +290,7 @@ mod tests {
             println!("=======================================");
             for section in sections {
                 let section_vec: Vec<_> = section.split_ascii_whitespace().collect();
-                let depth: usize =
-                    section_vec[0].chars().filter(|x| x.is_ascii_digit()).collect::<String>().parse().unwrap();
+                let depth: usize = section_vec[0].chars().filter(|x| x.is_ascii_digit()).collect::<String>().parse().unwrap();
                 let result_count: u64 = section_vec[1].parse().unwrap();
                 let total_count = chessgame.perft_count(depth);
                 let result_str = match result_count == total_count {
@@ -302,9 +298,7 @@ mod tests {
                     false => "Error!",
                 };
                 if result_str == "Error!" {
-                    error_vec.push(format!(
-                    "start_fen: {start_fen}\ndepth: {depth}, result_count: {result_count}, total_count: {total_count}, {result_str}"
-                ))
+                    error_vec.push(format!("start_fen: {start_fen}\ndepth: {depth}, result_count: {result_count}, total_count: {total_count}, {result_str}"))
                 }
                 println!("depth: {depth}, result_count: {result_count}, total_count: {total_count}, {result_str}");
             }

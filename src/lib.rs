@@ -16,7 +16,7 @@ use crate::{
 
 /* re-export */
 pub use crate::bitboard::{PieceType, Side, ChessPiece};
-pub use crate::chessmove::ChessMove;
+pub use crate::chessmove::{ChessMove, LexiOrd};
 pub use crate::square::Square;
 pub use crate::search::{Evaluator, NegamaxData, MATERIAL_EVAL};
 pub use crate::transposition::{AtomicTranspositionTable, TranspositionTable, PositionData, NodeType};

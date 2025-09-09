@@ -31,22 +31,6 @@ impl ChessBoardCore {
 }
 
 //FIXME wtf is this
-impl ChessMove {
-    pub fn print_move(&self) -> String {
-        if let MoveType::Promotion(piece) = self.move_type() {
-            return format!(
-                "{}{}{}",
-                SQUARE_SYM[self.source().to_usize()],
-                SQUARE_SYM[self.target().to_usize()],
-                piece.to_uci_char()
-            );
-        } else {
-            return format!("{}{}", SQUARE_SYM[self.source().to_usize()], SQUARE_SYM[self.target().to_usize()]);
-        }
-    }
-}
-
-//FIXME wtf is this
 impl ChessBoard {
     pub fn perft_count(&mut self, depth: usize) -> u64 {
         if depth == 0 {
