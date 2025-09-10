@@ -7,7 +7,7 @@ use std::{
 use atomic::Atomic;
 use bytemuck::{NoUninit, Pod};
 
-use crate::{ChessMove, search::ScoredMove, zobrist::ZobristHash};
+use crate::{ChessMove, zobrist::ZobristHash};
 
 //16MB for stc, 128MB for ltc
 //128MB is 1073741824 bits
@@ -113,10 +113,10 @@ impl PositionData {
         return Option::<ChessMove>::from(self.best);
     }
 
-    #[inline(always)]
-    pub fn pair(&self) -> ScoredMove {
-        return ScoredMove::new(self.eval, Option::<ChessMove>::from(self.best));
-    }
+    //#[inline(always)]
+    //pub fn pair(&self) -> ScoredMove {
+    //    return ScoredMove::new(self.eval, Option::<ChessMove>::from(self.best));
+    //}
 
     #[inline(always)]
     pub const fn value_type(value: i16, a: i16, b: i16) -> NodeType {

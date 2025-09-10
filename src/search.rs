@@ -19,26 +19,6 @@ pub struct MaterialEvaluator;
 
 pub const MATERIAL_EVAL: MaterialEvaluator = MaterialEvaluator {};
 
-pub struct ScoredMove(i16, Option<ChessMove>);
-
-impl Neg for ScoredMove {
-    type Output = ScoredMove;
-
-    fn neg(self) -> Self::Output {
-        Self(-self.0, self.1)
-    }
-}
-
-impl ScoredMove {
-    pub const fn new(a: i16, b: Option<ChessMove>) -> Self {
-        ScoredMove(a, b)
-    }
-
-    pub const fn unwrap(self) -> (i16, Option<ChessMove>) {
-        (self.0, self.1)
-    }
-}
-
 impl Evaluator for MaterialEvaluator {
     fn eval(&mut self, cb: &ChessBoard) -> i16 {
         let mut total: i16 = 0;
@@ -72,54 +52,48 @@ pub struct NegamaxData {
     ply: u16,
     node_count: usize,
     node_check_count: usize,
+    node_check_limit: usize,
     time_data: Option<(Instant, Duration)>,
-    pair: Option<(Vec<ChessMove>, GameState)>,
 }
 
 impl NegamaxData {
     #[inline(always)]
-    pub fn new(pair: Option<(Vec<ChessMove>, GameState)>) -> Self {
-        NegamaxData { ply: 0, node_count: 0, node_check_count: 0, time_data: None, pair }
+    pub fn new() -> Self {
+        NegamaxData { ply: 0, node_count: 0, node_check_count: 0, node_check_limit: DEFAULT_NODE_CHECK_COUNT_LIMIT, time_data: None }
     }
 
     #[inline(always)]
-    pub fn new_timed(pair: Option<(Vec<ChessMove>, GameState)>, start: Instant, limit: Duration) -> Self {
-        NegamaxData { ply: 0, node_count: 0, node_check_count: 0, time_data: Some((start, limit)), pair }
+    pub fn new_timed(start: Instant, limit: Duration) -> Self {
+        NegamaxData { ply: 0, node_count: 0, node_check_count: 0, node_check_limit: DEFAULT_NODE_CHECK_COUNT_LIMIT, time_data: Some((start, limit)) }
     }
 
     #[inline(always)]
     pub fn node_count(&self) -> usize {
         self.node_count
     }
-
-    #[inline(always)]
-    fn get_pair_or(&mut self, default: (Vec<ChessMove>, GameState)) -> (Vec<ChessMove>, GameState) {
-        self.pair.take().unwrap_or(default)
-    }
 }
 
 type AtomicTT = AtomicTranspositionTable;
-const NODE_CHECK_COUNT_LIMIT: usize = 1 << 6;
+const DEFAULT_NODE_CHECK_COUNT_LIMIT: usize = 1 << 8;
 
 impl ChessBoard {
-    pub fn negamax(&mut self, a: i16, b: i16, d: usize, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> ScoredMove {
+    pub fn negamax(&mut self, a: i16, b: i16, d: usize, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> i16 {
         let mut alpha: i16 = a;
         let position_data: PositionData = tt.load(&self.hash(), Ordering::Relaxed);
         let mut tt_chess_move: Option<ChessMove> = None;
         if position_data.depth() as usize >= d && position_data.is_valid(self.hash()) {
-            tt_chess_move = position_data.pair().1;
             match position_data.ty() {
-                NodeType::Exact => return position_data.pair(),
+                NodeType::Exact => return position_data.eval(),
                 NodeType::Alpha => {
                     if position_data.eval() >= b {
-                        return position_data.pair();
+                        return position_data.eval();
                     }
                     alpha = alpha.max(position_data.eval());
-                    tt_chess_move = position_data.pair().1;
+                    tt_chess_move = position_data.best();
                 }
                 NodeType::Beta => {
                     if position_data.eval() <= a && position_data.best().is_some() {
-                        return position_data.pair();
+                        return position_data.eval();
                     }
                     //beta = beta.min(data.eval());
                 }
@@ -133,60 +107,38 @@ impl ChessBoard {
         };
 
         if d == 0 {
-            return ScoredMove(ev.eval(&self), None);
+            return ev.eval(&self);
         }
 
-        let (moves, game_state) = data.get_pair_or(self.try_generate_moves());
+        let (moves, game_state) = self.try_generate_moves();
         if let GameState::Finished(state) = game_state {
             match state {
                 GameResult::WhiteWins | GameResult::BlackWins => {
-                    return ScoredMove(((i16::MIN + 2) / 2) + (data.ply as i16), None); //TODO determine if +d or -d or something else should be used here.
+                    return ((i16::MIN + 2) / 2) + (data.ply as i16); //TODO determine if +d or -d or something else should be used here.
                 }
-                GameResult::Draw => return ScoredMove::new(0, None),
+                GameResult::Draw => return 0,
             }
         }
 
-        //TODO sort moves here
         let mut best_value: i16 = i16::MIN + 1;
         let mut best_move: Option<ChessMove> = None;
 
-        //explore previous move in transposition table, if any
-        if let Some(chess_move) = tt_chess_move {
-            if let Some(time_data) = data.time_data {
-                if time_data.0.elapsed() > time_data.1 {
-                    return ScoredMove(best_value, best_move); //is the best_move usable here?
-                }
-            }
-
-            if let Some(snapshot) = self.try_explore_state(chess_move) {
-                data.node_count += 1; //apparently this is the accepted way to count nps
-                data.node_check_count += 1;
-                let ScoredMove(value, next_move) = -self.negamax(-b, -alpha, d - 1, ev, data, tt.clone());
-                self.restore_state(snapshot);
-                if value > best_value {
-                    best_value = value;
-                    best_move = Some(chess_move);
-                }
-
-                if value > alpha {
-                    alpha = value;
-                }
-            }
-        }
-
+        //TODO sort moves here
         for chess_move in moves {
-            if let Some(time_data) = data.time_data {
-                if data.node_check_count >= NODE_CHECK_COUNT_LIMIT {
-                    if time_data.0.elapsed() > time_data.1 {
-                        return ScoredMove(best_value, best_move); //is the best_move usable here?
+            if let Some((start, limit)) = data.time_data {
+                if data.node_check_count >= data.node_check_limit {
+                    if start.elapsed() > limit {
+                        //return best_value; //is the best_move usable here?
+                        return i16::MIN + 1;
                     }
                     data.node_check_count = 0;
                 }
             }
-            let snapshot: ChessBoardSnapshot = self.explore_state(chess_move);
+
+            let snapshot: ChessBoardSnapshot = self.explore_state(&chess_move);
             data.node_count += 1; //apparently this is the accepted way to count nps
             data.node_check_count += 1;
-            let ScoredMove(value, next_move) = -self.negamax(-b, -alpha, d - 1, ev, data, tt.clone());
+            let value: i16 = -self.negamax(-b, -alpha, d - 1, ev, data, tt.clone());
             self.restore_state(snapshot);
 
             if value > best_value {
@@ -204,7 +156,7 @@ impl ChessBoard {
 
         //tranposition table keep-up
         tt.update_tt(self.hash(), best_value, best_move, a, b, d as u16, Ordering::Relaxed);
-        return ScoredMove(best_value, best_move);
+        return best_value;
     }
 }
 

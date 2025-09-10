@@ -1,9 +1,4 @@
-use crate::{
-    ChessBoard, ChessBoardCore,
-    bitboard::SQUARE_SYM,
-    chessmove::{ChessMove, MoveType},
-    zobrist::ZobristTable,
-};
+use crate::{ChessBoard, ChessBoardCore, zobrist::ZobristTable};
 
 //FIXME wtf is this
 impl ChessBoardCore {
@@ -20,7 +15,7 @@ impl ChessBoardCore {
         let mut total: u64 = 0;
         for chessmove in moves {
             let mut new_chessboard: ChessBoardCore = *self;
-            new_chessboard.update_state(chessmove);
+            new_chessboard.update_state(&chessmove);
             let current_hash = new_chessboard.hash();
             zobrist_table.add(current_hash);
             total += new_chessboard.perft_count(zobrist_table, depth - 1);

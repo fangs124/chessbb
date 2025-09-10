@@ -5,7 +5,7 @@ use super::*;
 
 impl ChessBoardCore {
     //positively tests if a move is illegal
-    fn is_move_illegal(&self, chess_move: ChessMove) -> bool {
+    fn is_move_illegal(&self, chess_move: &ChessMove) -> bool {
         //move types: normal, castle, enpassant, promotion
         let source: Square = chess_move.source();
         let target: Square = chess_move.target();
@@ -55,7 +55,7 @@ impl ChessBoardCore {
     }
 
     //returns ChessBoardSnapshot if move was legal, otherwise returns None. //TODO might need to debug this
-    pub fn try_update_state(&self, chess_move: ChessMove) -> Option<ChessBoardCore> {
+    pub fn try_update_state(&self, chess_move: &ChessMove) -> Option<ChessBoardCore> {
         if self.is_move_illegal(chess_move) {
             return None;
         }
@@ -67,7 +67,7 @@ impl ChessBoardCore {
         return Some(chessboard);
     }
 
-    pub fn update_state(&mut self, chess_move: ChessMove) {
+    pub fn update_state(&mut self, chess_move: &ChessMove) {
         let mut enpassant_bb: BitBoard = BitBoard::ZERO;
         let source: Square = chess_move.source();
         let target: Square = chess_move.target();

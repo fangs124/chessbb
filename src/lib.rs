@@ -66,13 +66,13 @@ impl ChessBoard {
     }
 
     #[inline(always)]
-    pub fn update_state(&mut self, chess_move: ChessMove) {
+    pub fn update_state(&mut self, chess_move:& ChessMove) {
         self.core.update_state(chess_move);
         self.zt.add(self.core.hash());
     }
 
     #[inline(always)]
-    pub fn explore_state(&mut self, chess_move: ChessMove) -> ChessBoardSnapshot {
+    pub fn explore_state(&mut self, chess_move:& ChessMove) -> ChessBoardSnapshot {
         let core: ChessBoardCore = self.core.clone();
         self.update_state(chess_move);
         return ChessBoardSnapshot{ core, hash: self.core.hash() };
@@ -80,7 +80,7 @@ impl ChessBoard {
 
     #[inline(always)]
     pub fn try_explore_state(&mut self, chess_move: ChessMove) -> Option<ChessBoardSnapshot> {
-        if let Some(core) = self.core.try_update_state(chess_move) {
+        if let Some(core) = self.core.try_update_state(&chess_move) {
             let hash = core.hash();
             let snapshot = ChessBoardSnapshot{ core: self.core, hash };
             self.core = core;

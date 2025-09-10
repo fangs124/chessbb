@@ -25,7 +25,7 @@ fn old_main() {
     let mut chessgame = ChessBoard::from_fen(fen);
     chessgame.print_debug();
     for chessmove in moves {
-        chessgame.update_state(chessmove);
+        chessgame.update_state(&chessmove);
     }
     let (mut moves, _) = chessgame.try_generate_moves();
     moves.sort_by(LexiOrd::lexi_cmp);
@@ -171,7 +171,7 @@ fn old_main() {
         for chessmove in moves {
             let mut s = chessmove.print_move();
             let mut state = chessgame.clone();
-            state.update_state(chessmove);
+            state.update_state(&chessmove);
             let branch_total = state.perft_count(depth - 1);
             s.push_str(format!(" - {branch_total}").as_str());
             result_str_vec.push(s);
