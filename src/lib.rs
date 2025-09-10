@@ -1,5 +1,7 @@
-use std::fmt::Display;
+//#![feature(atomic_from_mut)]
+//#![feature(integer_atomics)]
 
+use std::fmt::Display;
 
 mod bitboard;
 mod chessmove;

@@ -79,6 +79,12 @@ impl ZobristHash {
     pub const fn to_index(&self) -> usize {
         return self.value as usize;
     }
+
+    #[inline(always)]
+    pub const fn to_u64(&self) -> u64 {
+        return self.value;
+    }
+
     pub(super) const fn initial_hash() -> ZobristHash {
         let mut value: u64 = 0;
 

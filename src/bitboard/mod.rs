@@ -1,4 +1,4 @@
-use std::{fmt::Display, slice::Iter};
+use std::{fmt::Display, i16, slice::Iter};
 
 use crate::square::Square;
 pub use attack::*;
@@ -41,7 +41,19 @@ pub enum PieceType {
     King,
 }
 
+//const FOO :i16 = i16::MAX;
+
 impl PieceType {
+    pub fn value(&self) -> i16 {
+        match self {
+            PieceType::Pawn => 100,
+            PieceType::Knight => 300,
+            PieceType::Bishop => 300,
+            PieceType::Rook => 500,
+            PieceType::Queen => 900,
+            PieceType::King => 10000,
+        }
+    }
     const PIECETYPES: [PieceType; 6] =
             [PieceType::King ,PieceType::Queen, PieceType::Knight, PieceType::Bishop, PieceType::Rook, PieceType::Pawn];
     pub fn iterator() -> std::slice::Iter<'static, PieceType> {

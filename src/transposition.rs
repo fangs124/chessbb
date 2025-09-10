@@ -1,11 +1,10 @@
 use std::{
     ops::{Index, IndexMut},
-    rc::Rc,
     sync::atomic::Ordering,
 };
 
 use atomic::Atomic;
-use bytemuck::{NoUninit};
+use bytemuck::NoUninit;
 
 use crate::{ChessMove, zobrist::ZobristHash};
 
@@ -14,14 +13,32 @@ use crate::{ChessMove, zobrist::ZobristHash};
 //16MB is  0134217728 bits
 //NodeData: 96 bit
 
+const POSITION_DATA_SIZE: usize = size_of::<AtomicPositionData>();
+const IS_LOCK_FREE: bool = Atomic::<PositionData>::is_lock_free();
+const HAS_128_ATOMIC: bool = cfg!(target_has_atomic = "128");
+
+//const IS_LOCK_FREE_1: bool = Atomic::<i16>::is_lock_free();
 #[derive(Debug, Copy, Clone, PartialEq, Eq, NoUninit)]
-#[repr(C)]
+#[repr(C, align(16))]
 pub struct PositionData {
     key: ZobristHash,
     depth: u16, //is u8 enough? u16 should be enough, its over 64 000+
     eval: i16,
     ty: NodeType,
     best: MaybeChessMove,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, NoUninit)]
+#[repr(transparent)]
+pub struct ZobristHigh(u16);
+impl From<ZobristHash> for ZobristHigh {
+    fn from(value: ZobristHash) -> Self {
+        Self((value.to_u64() & 0b11111111_11111111_00000000_00000000_00000000_00000000_00000000_00000000) as u16)
+    }
+}
+
+impl ZobristHigh {
+    const ZERO: ZobristHigh = ZobristHigh(0u16);
 }
 
 impl Default for PositionData {
@@ -75,7 +92,7 @@ impl MaybeChessMove {
 impl PositionData {
     #[inline(always)]
     fn new(key: ZobristHash, depth: u16, eval: i16, ty: NodeType, best: Option<ChessMove>) -> Self {
-        return Self { key, depth, eval: eval, ty, best: MaybeChessMove::from(best) };
+        return Self { key: ZobristHash::from(key), depth, eval: eval, ty, best: MaybeChessMove::from(best) };
     }
 
     #[inline(always)]
@@ -85,13 +102,13 @@ impl PositionData {
 
     #[inline(always)]
     pub fn is_valid(&self, hash: ZobristHash) -> bool {
-        return (self.ty != NodeType::None) && (self.key == hash);
+        return (self.ty != NodeType::None) && (self.key == ZobristHash::from(hash));
     }
 
-    #[inline(always)]
-    pub const fn key(&self) -> ZobristHash {
-        return self.key;
-    }
+    //#[inline(always)]
+    //pub const fn key(&self) -> ZobristHash {
+    //    return self.key;
+    //}
 
     #[inline(always)]
     pub const fn depth(&self) -> u16 {

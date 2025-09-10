@@ -1,5 +1,4 @@
 use std::{
-    ops::Neg,
     sync::{Arc, atomic::Ordering},
     time::{Duration, Instant},
 };
@@ -162,6 +161,62 @@ impl ChessBoard {
         tt.update_tt(self.hash(), best_value, best_move, a, b, d as u16, Ordering::Relaxed);
         return best_value;
     }
+
+    //fn quiescence_negamax(&mut self, a: i16, b: i16, d: usize, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> i16 {
+    //    let mut best_value: i16 = ev.eval(&self);
+    //    let mut alpha = a;
+    //
+    //    //assuming non-zugzwang?
+    //    if best_value >= b {
+    //        return best_value;
+    //    }
+    //
+    //    if best_value > alpha {
+    //        alpha = best_value;
+    //    }
+    //
+    //    let (mut moves, game_state) = self.try_generate_moves();
+    //    if let GameState::Finished(state) = game_state {
+    //        match state {
+    //            GameResult::WhiteWins | GameResult::BlackWins => {
+    //                return ((i16::MIN + 2) / 2) + (data.ply as i16); //TODO determine if +d or -d or something else should be used here.
+    //            }
+    //            GameResult::Draw => return 0,
+    //        }
+    //    }
+    //    moves = moves.into_iter().filter(|x| self.core.is_move_capture(x)).collect();
+    //    self.core.sort_moves(&mut moves.into_iter().filter(|x| self.core.is_move_capture(x)).collect());
+    //
+    //    for chess_move in &moves {
+    //        if let Some((start, limit)) = data.time_data {
+    //            if data.node_check_count >= data.node_check_limit {
+    //                if start.elapsed() > limit {
+    //                    //return best_value; //is the best_move usable here?
+    //                    return i16::MIN + 1;
+    //                }
+    //                data.node_check_count = 0;
+    //            }
+    //        }
+    //
+    //        let snapshot: ChessBoardSnapshot = self.explore_state(&chess_move);
+    //        data.node_count += 1; //apparently this is the accepted way to count nps
+    //        data.node_check_count += 1;
+    //        let value: i16 = -self.negamax(-b, -alpha, d - 1, ev, data, tt.clone());
+    //        self.restore_state(snapshot);
+    //
+    //        if value > best_value {
+    //            best_value = value;
+    //        }
+    //
+    //        if value > alpha {
+    //            alpha = value;
+    //            if alpha >= b {
+    //                break;
+    //            }
+    //        }
+    //    }
+    //    return best_value;
+    //}
 }
 
 /*

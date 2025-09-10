@@ -4,6 +4,27 @@ use super::chessmove::*;
 use super::*;
 
 impl ChessBoardCore {
+    //assumes move is legal
+    pub(crate) fn is_move_capture(&self, chess_move: &ChessMove) -> bool {
+        if chess_move.move_type() == MoveType::EnPassant || self.mailbox[chess_move.target().to_usize()].is_some() {
+            return true;
+        }
+        return false;
+    }
+
+    pub(crate) fn mvv_lva_score(&self, chess_move: &ChessMove) -> i16 {
+        let source_score = self.mailbox[chess_move.source().to_usize()].unwrap().1.value();
+        let target_score = match self.mailbox[chess_move.source().to_usize()] {
+            Some(chess_piece) => chess_piece.1.value(),
+            None => 0,
+        };
+        return target_score - source_score;
+    }
+
+    pub(crate) fn sort_moves(&self, chess_moves: &mut Vec<ChessMove>) {
+        chess_moves.sort_by_cached_key(|a| self.mvv_lva_score(a));
+    }
+
     //positively tests if a move is illegal
     fn is_move_illegal(&self, chess_move: &ChessMove) -> bool {
         //move types: normal, castle, enpassant, promotion
