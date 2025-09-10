@@ -4,6 +4,31 @@ use super::chessmove::*;
 use super::*;
 
 impl ChessBoardCore {
+    //assumes move is legal
+    pub(crate) fn is_move_capture(&self, chess_move: &ChessMove) -> bool {
+        if chess_move.move_type() == MoveType::EnPassant || self.mailbox[chess_move.target().to_usize()].is_some() {
+            return true;
+        }
+        return false;
+    }
+
+    pub(crate) fn mvv_lva_score(&self, chess_move: &ChessMove) -> i16 {
+        let source_score: i16 = self.mailbox[chess_move.source().to_usize()].unwrap().1.value();
+        let target_score: i16 = self.mailbox[chess_move.target().to_usize()].map_or(0, |x| x.1.value());
+
+        return (100 * target_score) - source_score;
+    }
+
+    pub(crate) fn mvv_score(&self, chess_move: &ChessMove) -> i16 {
+        let target_score: i16 = self.mailbox[chess_move.target().to_usize()].map_or(0, |x| x.1.value());
+
+        return target_score;
+    }
+
+    pub(crate) fn sort_moves(&self, chess_moves: &mut Vec<ChessMove>) {
+        chess_moves.sort_by_cached_key(|a| self.mvv_score(a));
+    }
+
     //positively tests if a move is illegal
     fn is_move_illegal(&self, chess_move: &ChessMove) -> bool {
         //move types: normal, castle, enpassant, promotion
@@ -439,6 +464,7 @@ impl ChessBoardCore {
                             sources.pop_bit(source);
                             continue;
                         }
+
                         /* moves and attacks */
                         moves.append(&mut self.calculate_moves(source, piece_type));
                         sources.pop_bit(source);
@@ -447,6 +473,60 @@ impl ChessBoardCore {
                     _ => {
                         /* moves and attacks */
                         moves.append(&mut self.calculate_moves(source, piece_type));
+                        sources.pop_bit(source);
+                    }
+                }
+
+                // /* moves and attacks */
+                // moves.append(&mut self.calculate_moves(source, piece_type));
+                // sources.pop_bit(source);
+            }
+        }
+        moves.append(&mut king_moves);
+        return moves;
+    }
+
+    pub fn generate_captures(&self) -> Vec<ChessMove> {
+        let mut moves: Vec<ChessMove> = Vec::new();
+        let mut king_moves: Vec<ChessMove> = Vec::new();
+        let side = self.side_to_move;
+
+        // consider if king is in check
+        let checkers_count = self.check_bb.count_ones();
+
+        for &piece_type in PieceType::iterator() {
+            // if double check, king move (triple and higher checks impossible?)
+            if checkers_count >= 2 && piece_type != PieceType::King {
+                continue;
+            }
+
+            let mut sources = self.piece_bb((side, piece_type));
+            while sources.is_not_zero() {
+                let source: Square = sources.lsb_square().unwrap();
+                let pinned_pieces = self.pinned_bb;
+
+                match piece_type {
+                    PieceType::King => {
+                        /* moves and attacks */
+                        king_moves.append(&mut self.calculate_captures(source, piece_type));
+                        sources.pop_bit(source);
+                    }
+
+                    PieceType::Knight => {
+                        // pinned knights can not move
+                        if pinned_pieces.nth_is_not_zero(source) {
+                            sources.pop_bit(source);
+                            continue;
+                        }
+
+                        /* moves and attacks */
+                        moves.append(&mut self.calculate_captures(source, piece_type));
+                        sources.pop_bit(source);
+                    }
+
+                    _ => {
+                        /* moves and attacks */
+                        moves.append(&mut self.calculate_captures(source, piece_type));
                         sources.pop_bit(source);
                     }
                 }
@@ -486,6 +566,66 @@ impl ChessBoardCore {
                 Side::Black => get_b_pawn_attack(source).bit_and(&enemies),
             },
         };
+
+        // only consider moves along pinning rays, if pinned
+        let pin_mask: BitBoard = self.pin_mask(source);
+        if pin_mask.is_not_zero() {
+            targets = targets.bit_and(&pin_mask);
+        }
+
+        //only consider moves along checking ray if in check, unless piece is your king
+        if self.check_bb.is_not_zero() && piece_type != PieceType::King {
+            targets = targets.bit_and(&check_mask.bit_or(&self.check_bb));
+        }
+
+        while targets.is_not_zero() {
+            let target = targets.lsb_square().unwrap();
+
+            //king: cannot move to a square under attack
+            let blockers = match self.side_to_move {
+                Side::White => self.blockers_no_white_king().bit_and(&BitBoard::nth(target).bit_not()),
+                Side::Black => self.blockers_no_black_king().bit_and(&BitBoard::nth(target).bit_not()),
+            };
+
+            if piece_type == PieceType::King && self.is_square_attacked(target, side.update(), blockers) {
+                targets.pop_bit(target);
+                continue;
+            };
+
+            //append moves
+            moves.push(ChessMove::new(source, target, MoveType::Normal));
+            targets.pop_bit(target);
+        }
+        return moves;
+    }
+
+    fn calculate_captures(&self, source: Square, piece_type: PieceType) -> Vec<ChessMove> {
+        //pawn rules are complex, best handled separately, use calculate_pawn_moves()
+        if matches!(piece_type, PieceType::Pawn) {
+            return self.calculate_pawn_captures(source);
+        }
+
+        let check_mask = self.check_mask;
+        let side = self.side_to_move;
+        let blockers: BitBoard = self.blockers();
+        let (friends, enemies) = match side {
+            Side::White => (self.white_blockers(), self.black_blockers()),
+            Side::Black => (self.black_blockers(), self.white_blockers()),
+        };
+
+        let mut moves: Vec<ChessMove> = Vec::with_capacity(40);
+        let mut targets: BitBoard = match piece_type {
+            PieceType::King => get_king_attack(source).bit_and(&friends.bit_not()),
+            PieceType::Queen => get_queen_attack(source, blockers).bit_and(&friends.bit_not()),
+            PieceType::Knight => get_knight_attack(source).bit_and(&friends.bit_not()),
+            PieceType::Bishop => get_bishop_attack(source, blockers).bit_and(&friends.bit_not()),
+            PieceType::Rook => get_rook_attack(source, blockers).bit_and(&friends.bit_not()),
+            PieceType::Pawn => match side {
+                Side::White => get_w_pawn_attack(source).bit_and(&enemies),
+                Side::Black => get_b_pawn_attack(source).bit_and(&enemies),
+            },
+        }
+        .bit_and(&enemies);
 
         // only consider moves along pinning rays, if pinned
         let pin_mask: BitBoard = self.pin_mask(source);
@@ -722,6 +862,10 @@ impl ChessBoardCore {
         }
 
         return moves;
+    }
+
+    fn calculate_pawn_captures(&self, source: Square) -> Vec<ChessMove> {
+        return self.calculate_pawn_moves(source).into_iter().filter(|x| self.is_move_capture(x)).collect();
     }
 
     pub(super) fn compute_check_bb(&mut self) {

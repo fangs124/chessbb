@@ -41,7 +41,20 @@ pub enum PieceType {
     King,
 }
 
+//const FOO :i16 = i16::MAX;
+
 impl PieceType {
+    pub fn value(&self) -> i16 {
+        match self {
+            PieceType::Pawn => 1,
+            PieceType::Knight => 3,
+            PieceType::Bishop => 3,
+            PieceType::Rook => 5,
+            PieceType::Queen => 9,
+            PieceType::King => 100,
+        }
+    }
+
     const PIECETYPES: [PieceType; 6] =
             [PieceType::King ,PieceType::Queen, PieceType::Knight, PieceType::Bishop, PieceType::Rook, PieceType::Pawn];
     pub fn iterator() -> std::slice::Iter<'static, PieceType> {

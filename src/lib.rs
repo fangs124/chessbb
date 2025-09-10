@@ -166,6 +166,22 @@ impl ChessBoard {
             return (moves, GameState::Finished(GameResult::Draw));
         }
     }
+
+    pub fn try_generate_captures(&self) -> (Vec<ChessMove>, GameState) {
+        if self.zt.count_hash(self.core.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
+            return (Vec::new(), GameState::Finished(GameResult::Draw))
+        }
+        let moves = self.core.generate_captures();
+        if moves.len() != 0 {
+            return (moves,GameState::Ongoing);
+        } else if self.is_king_in_check(Side::White) {
+            return (moves,GameState::Finished(GameResult::BlackWins));
+        } else if self.is_king_in_check(Side::Black) {
+            return (moves,GameState::Finished(GameResult::WhiteWins));
+        } else { //stalemate
+            return (moves, GameState::Finished(GameResult::Draw));
+        }
+    }
     
     //TODO calling generate_moves() here is expensive, fix
     //pub fn state(&self) -> GameState {

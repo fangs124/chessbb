@@ -111,10 +111,11 @@ impl ChessBoard {
         };
 
         if d == 0 {
-            return ev.eval(&self);
+            //return ev.eval(self);
+            return self.quiescence_negamax(alpha, b, ChessBoard::QUIESCENE_FALLBACK_DEPTH, ev, data, tt);
         }
 
-        let (moves, game_state) = self.try_generate_moves();
+        let (mut moves, game_state) = self.try_generate_moves();
         if let GameState::Finished(state) = game_state {
             match state {
                 GameResult::WhiteWins | GameResult::BlackWins => {
@@ -128,6 +129,8 @@ impl ChessBoard {
         let mut best_move: Option<ChessMove> = None;
 
         //TODO sort moves here
+        //self.core.sort_moves(&mut moves);
+        //for chess_move in tt_chess_move.into_iter().chain(moves.into_iter()) {
         for chess_move in moves {
             if let Some((start, limit)) = data.time_data {
                 if data.node_check_count >= data.node_check_limit {
@@ -160,6 +163,67 @@ impl ChessBoard {
 
         //tranposition table keep-up
         tt.update_tt(self.hash(), best_value, best_move, a, b, d as u16, Ordering::Relaxed);
+        return best_value;
+    }
+
+    const QUIESCENE_FALLBACK_DEPTH: u16 = 3;
+
+    fn quiescence_negamax(&mut self, a: i16, b: i16, d: u16, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> i16 {
+        if self.repetition() >= 2 {
+            return 0;
+        }
+
+        let mut best_value: i16 = ev.eval(&self);
+        let mut alpha = a;
+
+        //assuming non-zugzwang?
+        if best_value >= b {
+            return best_value;
+        }
+
+        if best_value > alpha {
+            alpha = best_value;
+        }
+
+        let (mut moves, game_state) = self.try_generate_captures();
+        if let GameState::Finished(state) = game_state {
+            match state {
+                GameResult::WhiteWins | GameResult::BlackWins => {
+                    return ((i16::MIN + 2) / 2) + (data.ply as i16); //TODO determine if +d or -d or something else should be used here.
+                }
+                GameResult::Draw => return 0,
+            }
+        }
+
+        for chess_move in &moves {
+            if let Some((start, limit)) = data.time_data {
+                if data.node_check_count >= data.node_check_limit {
+                    if start.elapsed() > limit {
+                        //return best_value; //is the best_move usable here?
+                        return i16::MIN + 1;
+                    }
+                    data.node_check_count = 0;
+                }
+            }
+
+            let snapshot: ChessBoardSnapshot = self.explore_state(&chess_move);
+            data.node_count += 1; //apparently this is the accepted way to count nps
+            data.node_check_count += 1;
+            let value: i16 = -self.quiescence_negamax(-b, -alpha, d - 1, ev, data, tt.clone());
+            self.restore_state(snapshot);
+
+            if value > best_value {
+                best_value = value;
+            }
+
+            if value > alpha {
+                alpha = value;
+                if alpha >= b {
+                    break;
+                }
+            }
+        }
+
         return best_value;
     }
 }
