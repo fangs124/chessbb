@@ -222,6 +222,11 @@ impl ChessBoard {
         //println!("chessboard.check_bb:\n{}\n", chessboard.check_bb);
         //println!("chessboard.check_mask:\n{}\n", chessgame.check_mask);
     }
+
+    #[inline(always)]
+    pub fn repetition(& self) -> usize {
+        self.zt.count_hash(self.core.hash())
+    }
     //#[inline(always)]
     //pub fn look_up_tt(&self) -> NodeData {
     //    self.tt.look_up(&self.hash())

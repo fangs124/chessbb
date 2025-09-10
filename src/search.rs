@@ -78,6 +78,10 @@ const DEFAULT_NODE_CHECK_COUNT_LIMIT: usize = 1 << 8;
 
 impl ChessBoard {
     pub fn negamax(&mut self, a: i16, b: i16, d: usize, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> i16 {
+        if self.repetition() >= 2 {
+            return 0;
+        }
+
         let mut alpha: i16 = a;
         let position_data: PositionData = tt.load(&self.hash(), Ordering::Relaxed);
         let mut tt_chess_move: Option<ChessMove> = None;

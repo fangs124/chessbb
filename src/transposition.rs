@@ -5,7 +5,7 @@ use std::{
 };
 
 use atomic::Atomic;
-use bytemuck::{NoUninit, Pod};
+use bytemuck::{NoUninit};
 
 use crate::{ChessMove, zobrist::ZobristHash};
 
