@@ -1,5 +1,5 @@
-//#![feature(atomic_from_mut)]
-//#![feature(integer_atomics)]
+#![feature(integer_atomics)]
+#![feature(atomic_from_mut)]
 
 use std::fmt::Display;
 

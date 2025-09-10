@@ -1,5 +1,5 @@
 [toolchain]
-channel = "stable"
-#channel = "nightly"
+#channel = "stable"
+channel = "nightly"
 #[build]
-#rustflags = ["-Ctarget-cpu=native"]
+rustflags = ["-Ctarget-cpu=native"]
