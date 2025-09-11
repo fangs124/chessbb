@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::num::NonZero;
 
 use crate::PieceType;
 use crate::bitboard::*;
@@ -48,7 +49,7 @@ note: castling move are encoded as follows
 //FIXME need to change visibility here... its only pub for debug
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ChessMove {
-    data: u16,
+    data: NonZero<u16>,
 }
 
 pub trait LexiOrd {
@@ -101,16 +102,16 @@ impl ChessMove {
 
     #[inline(always)]
     pub(crate) const fn source(&self) -> Square {
-        Square::new((self.data & 0b000000_111111u16) as u8)
+        Square::new((self.data.get() & 0b000000_111111u16) as u8)
     }
 
     #[inline(always)]
     pub(crate) const fn target(&self) -> Square {
-        Square::new(((self.data & 0b111111_000000u16) >> 6) as u8)
+        Square::new(((self.data.get() & 0b111111_000000u16) >> 6) as u8)
     }
 
     pub(crate) const fn move_type(&self) -> MoveType {
-        let piece: PieceType = match ((self.data & 0b11_000000_000000u16) as usize) >> 12 {
+        let piece: PieceType = match ((self.data.get() & 0b11_000000_000000u16) as usize) >> 12 {
             0b00 => PieceType::Knight,
             0b01 => PieceType::Bishop,
             0b10 => PieceType::Rook,
@@ -118,7 +119,7 @@ impl ChessMove {
             _ => unreachable!(),
         };
 
-        let castling: Castling = match ((self.data & 0b11_000000_000000u16) as usize) >> 12 {
+        let castling: Castling = match ((self.data.get() & 0b11_000000_000000u16) as usize) >> 12 {
             0b00 => Castling::Kingside(Side::White),
             0b01 => Castling::Queenside(Side::White),
             0b10 => Castling::Kingside(Side::Black),
@@ -126,7 +127,7 @@ impl ChessMove {
             _ => unreachable!(),
         };
 
-        match ((self.data & 0b11_00_000000_000000) as usize) >> 14 {
+        match ((self.data.get() & 0b11_00_000000_000000) as usize) >> 14 {
             0 => MoveType::Normal,
             1 => MoveType::Castle(castling),
             2 => MoveType::EnPassant,
@@ -137,22 +138,22 @@ impl ChessMove {
 
     #[inline(always)]
     pub(crate) const fn set_source(&mut self, index: usize) {
-        self.data &= (index & 0b111111) as u16;
+        self.data = NonZero::new(self.data.get() & (index & 0b111111) as u16).expect("a legal move can not have zero bit-pattern.");
     }
 
     #[inline(always)]
     pub(crate) const fn set_target(&mut self, index: usize) {
-        self.data &= ((index << 6) & 0b111111_000000) as u16;
+        self.data = NonZero::new(self.data.get() & ((index << 6) & 0b111111_000000) as u16).expect("a legal move can not have zero bit-pattern.");
     }
 
     #[inline(always)]
     pub const fn from_raw(data: u16) -> ChessMove {
-        ChessMove { data }
+        ChessMove { data: NonZero::new(data).expect("a legal move can not have zero bit-pattern.") }
     }
 
     #[inline(always)]
     pub const fn data(&self) -> u16 {
-        self.data
+        self.data.get()
     }
 
     pub const fn new(s: Square, t: Square, m: MoveType) -> Self {
@@ -177,7 +178,7 @@ impl ChessMove {
         };
 
         data |= ((move_type_data << 12) & 0b11_11_000000_000000) as u16;
-        Self { data }
+        ChessMove { data: NonZero::new(data).expect("a legal move can not have zero bit-pattern.") }
     }
 
     pub(crate) const fn promotions(source: Square, target: Square) -> [ChessMove; 4] {
