@@ -78,31 +78,8 @@ const DEFAULT_NODE_CHECK_COUNT_LIMIT: usize = 1 << 8;
 
 impl ChessBoard {
     pub fn negamax(&mut self, a: i16, b: i16, d: usize, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> i16 {
-        if self.repetition() >= 2 {
+        if self.repetition() >= 3 {
             return 0;
-        }
-
-        let mut alpha: i16 = a;
-        let position_data: PositionData = tt.load(&self.hash(), Ordering::Relaxed);
-        let mut tt_chess_move: Option<ChessMove> = None;
-        if position_data.depth() as usize >= d && position_data.is_valid(self.hash()) {
-            match position_data.ty() {
-                NodeType::Exact => return position_data.eval(),
-                NodeType::Alpha => {
-                    if position_data.eval() >= b {
-                        return position_data.eval();
-                    }
-                    alpha = alpha.max(position_data.eval());
-                    tt_chess_move = position_data.best();
-                }
-                NodeType::Beta => {
-                    if position_data.eval() <= a && position_data.best().is_some() {
-                        return position_data.eval();
-                    }
-                    //beta = beta.min(data.eval());
-                }
-                NodeType::None => unreachable!(),
-            }
         }
 
         let d = match self.is_king_in_check(self.side()) {
@@ -111,8 +88,8 @@ impl ChessBoard {
         };
 
         if d == 0 {
-            //return ev.eval(self);
-            return self.quiescence_negamax(alpha, b, ChessBoard::QUIESCENE_FALLBACK_DEPTH, ev, data, tt);
+            return ev.eval(self);
+            //return self.quiescence_negamax(alpha, b, ChessBoard::QUIESCENE_FALLBACK_DEPTH, ev, data, tt);
         }
 
         let (mut moves, game_state) = self.try_generate_moves();
@@ -125,6 +102,29 @@ impl ChessBoard {
             }
         }
 
+        let position_data: PositionData = tt.load(&self.hash(), Ordering::Relaxed);
+        let mut tt_chess_move: Option<ChessMove> = None;
+        if position_data.depth() as usize >= d && position_data.is_valid(self.hash()) {
+            match position_data.ty() {
+                NodeType::Exact => return position_data.eval(),
+                NodeType::Alpha => {
+                    if position_data.eval() >= b {
+                        return position_data.eval();
+                    }
+                    //alpha = alpha.max(position_data.eval());
+                    tt_chess_move = position_data.best();
+                }
+                NodeType::Beta => {
+                    if position_data.eval() <= a && position_data.best().is_some() {
+                        return position_data.eval();
+                    }
+                    //beta = beta.min(data.eval());
+                }
+                NodeType::None => unreachable!(),
+            }
+        }
+
+        let mut alpha: i16 = a;
         let mut best_value: i16 = i16::MIN + 1;
         let mut best_move: Option<ChessMove> = None;
 
