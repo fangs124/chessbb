@@ -89,7 +89,7 @@ impl ChessBoard {
 
         if d == 0 {
             return ev.eval(self);
-            //return self.quiescence_negamax(alpha, b, ChessBoard::QUIESCENE_FALLBACK_DEPTH, ev, data, tt);
+            //return self.quiescence_negamax(a, b, ChessBoard::QUIESCENE_FALLBACK_DEPTH, ev, data, tt);
         }
 
         let (mut moves, game_state) = self.try_generate_moves();
@@ -169,7 +169,7 @@ impl ChessBoard {
     const QUIESCENE_FALLBACK_DEPTH: u16 = 3;
 
     fn quiescence_negamax(&mut self, a: i16, b: i16, d: u16, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> i16 {
-        if self.repetition() >= 2 {
+        if self.repetition() >= 3 {
             return 0;
         }
 
