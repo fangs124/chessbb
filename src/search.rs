@@ -164,7 +164,7 @@ impl ChessBoard {
             }
 
             if let Some(node_limit) = data.node_limit {
-                if data.node_check_count >= node_limit.get() {
+                if data.node_count >= node_limit.get() {
                     return i16::MIN + 1;
                 }
             }

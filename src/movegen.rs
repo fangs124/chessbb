@@ -9,7 +9,6 @@ impl ChessBoardCore {
         //move types: normal, castle, enpassant, promotion
         let source: Square = chess_move.source();
         let target: Square = chess_move.target();
-
         //check if piece is there
         if let Some((source_side, source_piece_type)) = self.mailbox[source.to_usize()] {
             let move_type = chess_move.move_type();
