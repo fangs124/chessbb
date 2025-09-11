@@ -1,4 +1,5 @@
 use std::{
+    num::NonZero,
     ops::Neg,
     sync::{Arc, atomic::Ordering},
     time::{Duration, Instant},
@@ -51,20 +52,43 @@ impl Evaluator for MaterialEvaluator {
 pub struct NegamaxData {
     ply: u16,
     node_count: usize,
+    node_limit: Option<NonZero<usize>>,
     node_check_count: usize,
     node_check_limit: usize,
-    time_data: Option<(Instant, Duration)>,
+    time_limit: Option<(Instant, Duration)>,
 }
 
 impl NegamaxData {
+    pub fn new(node_limit: Option<NonZero<usize>>, time_limit: Option<(Instant, Duration)>) -> Self {
+        NegamaxData { ply: 0, node_count: 0, node_limit, node_check_count: 0, node_check_limit: DEFAULT_NODE_CHECK_COUNT_LIMIT, time_limit }
+    }
     #[inline(always)]
-    pub fn new() -> Self {
-        NegamaxData { ply: 0, node_count: 0, node_check_count: 0, node_check_limit: DEFAULT_NODE_CHECK_COUNT_LIMIT, time_data: None }
+    pub fn new_no_limit() -> Self {
+        NegamaxData { ply: 0, node_count: 0, node_limit: None, node_check_count: 0, node_check_limit: DEFAULT_NODE_CHECK_COUNT_LIMIT, time_limit: None }
     }
 
     #[inline(always)]
     pub fn new_timed(start: Instant, limit: Duration) -> Self {
-        NegamaxData { ply: 0, node_count: 0, node_check_count: 0, node_check_limit: DEFAULT_NODE_CHECK_COUNT_LIMIT, time_data: Some((start, limit)) }
+        NegamaxData {
+            ply: 0,
+            node_count: 0,
+            node_limit: None,
+            node_check_count: 0,
+            node_check_limit: DEFAULT_NODE_CHECK_COUNT_LIMIT,
+            time_limit: Some((start, limit)),
+        }
+    }
+
+    #[inline(always)]
+    pub fn new_fixed_node(node_limit: NonZero<usize>) -> Self {
+        NegamaxData {
+            ply: 0,
+            node_count: 0,
+            node_limit: Some(node_limit),
+            node_check_count: 0,
+            node_check_limit: DEFAULT_NODE_CHECK_COUNT_LIMIT,
+            time_limit: None,
+        }
     }
 
     #[inline(always)]
@@ -132,13 +156,19 @@ impl ChessBoard {
         //self.core.sort_moves(&mut moves);
         //for chess_move in tt_chess_move.into_iter().chain(moves.into_iter()) {
         for chess_move in moves {
-            if let Some((start, limit)) = data.time_data {
+            if let Some((start, limit)) = data.time_limit {
                 if data.node_check_count >= data.node_check_limit {
                     if start.elapsed() > limit {
                         //return best_value; //is the best_move usable here?
                         return i16::MIN + 1;
                     }
                     data.node_check_count = 0;
+                }
+            }
+
+            if let Some(node_limit) = data.node_limit {
+                if data.node_count >= node_limit.get() {
+                    return i16::MIN + 1;
                 }
             }
 
