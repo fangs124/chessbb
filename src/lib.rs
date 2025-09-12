@@ -243,6 +243,12 @@ impl ChessBoard {
     pub fn repetition(& self) -> usize {
         self.zt.count_hash(self.core.hash())
     }
+
+    #[inline(always)]
+    pub fn is_fifty_move_rule(& self) -> bool {
+        self.core.fifty_move_rule_counter > 100
+    }
+
     //#[inline(always)]
     //pub fn look_up_tt(&self) -> NodeData {
     //    self.tt.look_up(&self.hash())
@@ -252,6 +258,7 @@ impl ChessBoard {
     //pub fn update_tt(&mut self, value: i16, chess_move:Option<ChessMove>, a: i16, b:i16, d:u16) {
     //    self.tt.store(self.hash(), d, value, Some(NodeData::value_type(value, a, b)), chess_move);
     //}
+
 
 }
 

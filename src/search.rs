@@ -102,7 +102,7 @@ const DEFAULT_NODE_CHECK_COUNT_LIMIT: usize = 1 << 8;
 
 impl ChessBoard {
     pub fn negamax(&mut self, a: i16, b: i16, d: usize, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> i16 {
-        if self.repetition() >= 3 {
+        if self.repetition() >= 3 || self.is_fifty_move_rule() {
             return 0;
         }
 
@@ -131,20 +131,9 @@ impl ChessBoard {
         if position_data.depth() as usize >= d && position_data.is_valid(self.hash()) {
             match position_data.ty() {
                 NodeType::Exact => return position_data.eval(),
-                NodeType::Alpha => {
-                    if position_data.eval() >= b {
-                        return position_data.eval();
-                    }
-                    //alpha = alpha.max(position_data.eval());
-                    tt_chess_move = position_data.best();
-                }
-                NodeType::Beta => {
-                    if position_data.eval() <= a && position_data.best().is_some() {
-                        return position_data.eval();
-                    }
-                    //beta = beta.min(data.eval());
-                }
-                NodeType::None => unreachable!(),
+                NodeType::Alpha if position_data.eval() >= b => return position_data.eval(),
+                NodeType::Beta if position_data.eval() <= a => return position_data.eval(),
+                _ => (),
             }
         }
 
@@ -187,9 +176,10 @@ impl ChessBoard {
 
             if value > alpha {
                 alpha = value;
-                if alpha >= b {
-                    break;
-                }
+            }
+
+            if alpha >= b {
+                break;
             }
         }
 
