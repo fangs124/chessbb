@@ -98,6 +98,7 @@ impl ChessBoard {
         }
         return false;
     }
+    
     #[inline(always)]
     pub fn update_state(&mut self, chess_move:& ChessMove) {
         self.core.update_state(chess_move);
