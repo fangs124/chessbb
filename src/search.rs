@@ -106,17 +106,6 @@ impl ChessBoard {
             return 0;
         }
 
-        let position_data: PositionData = tt.load(&self.hash(), Ordering::Relaxed);
-        let mut tt_chess_move: Option<ChessMove> = None;
-        if position_data.depth() as usize >= d && position_data.is_valid(self.hash()) {
-            match position_data.ty() {
-                NodeType::Exact => return position_data.eval(),
-                NodeType::Alpha if position_data.eval() >= b => return position_data.eval(),
-                NodeType::Beta if position_data.eval() <= a => return position_data.eval(),
-                _ => (),
-            }
-        }
-
         let d = match self.is_king_in_check(self.side()) {
             true => d + 1,
             false => d,
@@ -134,6 +123,17 @@ impl ChessBoard {
                     return ((i16::MIN + 2) / 2) + (data.ply as i16); //TODO determine if +d or -d or something else should be used here.
                 }
                 GameResult::Draw => return 0,
+            }
+        }
+
+        let position_data: PositionData = tt.load(&self.hash(), Ordering::Relaxed);
+        let mut tt_chess_move: Option<ChessMove> = None;
+        if position_data.depth() as usize >= d && position_data.is_valid(self.hash()) {
+            match position_data.ty() {
+                NodeType::Exact => return position_data.eval(),
+                NodeType::Alpha if position_data.eval() >= b => return position_data.eval(),
+                NodeType::Beta if position_data.eval() <= a => return position_data.eval(),
+                _ => (),
             }
         }
 
