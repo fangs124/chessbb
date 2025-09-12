@@ -175,7 +175,9 @@ impl ChessBoard {
             let snapshot: ChessBoardSnapshot = self.explore_state(&chess_move);
             data.node_count += 1; //apparently this is the accepted way to count nps
             data.node_check_count += 1;
+            data.ply += 1;
             let value: i16 = -self.negamax(-b, -alpha, d - 1, ev, data, tt.clone());
+            data.ply -= 1;
             self.restore_state(snapshot);
 
             if value > best_value {
@@ -226,7 +228,7 @@ impl ChessBoard {
         }
 
         for chess_move in &moves {
-            if let Some((start, limit)) = data.time_data {
+            if let Some((start, limit)) = data.time_limit {
                 if data.node_check_count >= data.node_check_limit {
                     if start.elapsed() > limit {
                         //return best_value; //is the best_move usable here?
