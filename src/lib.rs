@@ -66,6 +66,39 @@ impl ChessBoard {
     }
 
     #[inline(always)]
+    pub fn white_piece_count(&self) -> usize {
+        self.core.white_blockers().count_ones() as usize
+    }
+
+    #[inline(always)]
+    pub fn black_piece_count(&self) -> usize {
+        self.core.black_blockers().count_ones() as usize
+    }
+    
+    #[inline(always)]
+    pub fn total_piece_count(&self) -> usize {
+        self.white_piece_count() + self.black_piece_count()
+    }
+
+    //positively identifies states with insufficient mating material
+    #[inline(always)]
+    pub const fn is_insufficient_material(&self) -> bool {
+        let white_other_piece_count: u32 = self.core.piece_bb((Side::White, PieceType::Pawn)).bit_and(&self.core.piece_bb((Side::White, PieceType::Rook))).bit_and(&self.core.piece_bb((Side::White, PieceType::Queen))).count_ones();
+        let black_other_piece_count: u32 = self.core.piece_bb((Side::Black, PieceType::Pawn)).bit_and(&self.core.piece_bb((Side::Black, PieceType::Rook))).bit_and(&self.core.piece_bb((Side::Black, PieceType::Queen))).count_ones();
+        if white_other_piece_count == 0 || black_other_piece_count == 0 {
+            let white_bishop_count: u32 = self.core.piece_bb((Side::White, PieceType::Bishop)).count_ones();
+            let white_knight_count: u32 = self.core.piece_bb((Side::White, PieceType::Bishop)).count_ones();
+            let black_bishop_count: u32 = self.core.piece_bb((Side::Black, PieceType::Bishop)).count_ones();
+            let black_knight_count: u32 = self.core.piece_bb((Side::Black, PieceType::Bishop)).count_ones();
+
+            //K + B vs. K or K + N vs. K
+            if (white_bishop_count + white_knight_count == 1) && (black_bishop_count + black_knight_count == 0) || (white_bishop_count + white_knight_count == 0) && (black_bishop_count + black_knight_count == 1) {
+                return true;
+            }
+        }
+        return false;
+    }
+    #[inline(always)]
     pub fn update_state(&mut self, chess_move:& ChessMove) {
         self.core.update_state(chess_move);
         self.zt.add(self.core.hash());
