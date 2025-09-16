@@ -95,6 +95,16 @@ impl NegamaxData {
     pub fn node_count(&self) -> usize {
         self.node_count
     }
+
+    #[inline(always)]
+    pub fn get_ply(&self) -> u16 {
+        self.ply
+    }
+
+    #[inline(always)]
+    pub fn set_ply(&mut self, ply: u16) {
+        self.ply = ply;
+    }
 }
 
 type AtomicTT = AtomicTranspositionTable;
@@ -102,22 +112,10 @@ const DEFAULT_NODE_CHECK_COUNT_LIMIT: usize = 1 << 8;
 
 impl ChessBoard {
     pub fn negamax(&mut self, a: i16, b: i16, d: usize, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> i16 {
-        if self.repetition() >= 3 || self.is_fifty_move_rule() {
-            return 0;
-        }
-
-        let d = match self.is_king_in_check(self.side()) {
-            true => d + 1,
-            false => d,
-        };
-
-        if d == 0 {
-            return ev.eval(self);
-            //return self.quiescence_negamax(a, b, ChessBoard::QUIESCENE_FALLBACK_DEPTH, ev, data, tt);
-        }
-
-        let (mut moves, game_state) = self.try_generate_moves();
+        data.ply += 1;
+        let (moves, game_state) = self.try_check_state();
         if let GameState::Finished(state) = game_state {
+            data.ply -= 1;
             match state {
                 GameResult::WhiteWins | GameResult::BlackWins => {
                     return ((i16::MIN + 2) / 2) + (data.ply as i16); //TODO determine if +d or -d or something else should be used here.
@@ -126,13 +124,37 @@ impl ChessBoard {
             }
         }
 
+        let d = match self.is_king_in_check(self.side()) {
+            true => d + 1,
+            false => d,
+        };
+
+        if d == 0 {
+            data.ply -= 1;
+            return ev.eval(self);
+            //return self.quiescence_negamax(a, b, ChessBoard::QUIESCENE_FALLBACK_DEPTH, ev, data, tt);
+        }
+
+        let mut moves = moves.unwrap_or_else(|| self.core.generate_moves(None));
+
         let position_data: PositionData = tt.load(&self.hash(), Ordering::Relaxed);
         let mut tt_chess_move: Option<ChessMove> = None;
         if position_data.depth() as usize >= d && position_data.is_valid(self.hash()) {
             match position_data.ty() {
-                NodeType::Exact => return position_data.eval(),
-                NodeType::Alpha if position_data.eval() >= b => return position_data.eval(),
-                NodeType::Beta if position_data.eval() <= a => return position_data.eval(),
+                NodeType::Exact => {
+                    {
+                        data.ply -= 1;
+                        return position_data.eval();
+                    };
+                }
+                NodeType::Alpha if position_data.eval() >= b => {
+                    data.ply -= 1;
+                    return position_data.eval();
+                }
+                NodeType::Beta if position_data.eval() <= a => {
+                    data.ply -= 1;
+                    return position_data.eval();
+                }
                 _ => (),
             }
         }
@@ -148,8 +170,13 @@ impl ChessBoard {
             if let Some((start, limit)) = data.time_limit {
                 if data.node_check_count >= data.node_check_limit {
                     if start.elapsed() > limit {
+                        //when fail high, i.e. best_value >= beta, can return best_value
                         //return best_value; //is the best_move usable here?
-                        return i16::MIN + 1;
+                        data.ply -= 1;
+                        return match best_value >= b {
+                            true => best_value,
+                            false => i16::MIN + 1,
+                        };
                     }
                     data.node_check_count = 0;
                 }
@@ -157,16 +184,18 @@ impl ChessBoard {
 
             if let Some(node_limit) = data.node_limit {
                 if data.node_count >= node_limit.get() {
-                    return i16::MIN + 1;
+                    data.ply -= 1;
+                    return match best_value >= b {
+                        true => best_value,
+                        false => i16::MIN + 1,
+                    };
                 }
             }
 
             let snapshot: ChessBoardSnapshot = self.explore_state(&chess_move);
             data.node_count += 1; //apparently this is the accepted way to count nps
             data.node_check_count += 1;
-            data.ply += 1;
             let value: i16 = -self.negamax(-b, -alpha, d - 1, ev, data, tt.clone());
-            data.ply -= 1;
             self.restore_state(snapshot);
 
             if value > best_value {
@@ -185,6 +214,7 @@ impl ChessBoard {
 
         //tranposition table keep-up
         tt.update_tt(self.hash(), best_value, best_move, a, b, d as u16, Ordering::Relaxed);
+        data.ply -= 1;
         return best_value;
     }
 

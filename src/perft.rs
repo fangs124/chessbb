@@ -8,7 +8,7 @@ impl ChessBoardCore {
             return 1;
         }
 
-        let moves = self.generate_moves();
+        let moves = self.generate_moves(None);
         if depth == 1 {
             return moves.len() as u64;
         }

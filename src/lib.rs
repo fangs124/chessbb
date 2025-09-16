@@ -18,7 +18,7 @@ use crate::{
 pub use crate::bitboard::{PieceType, Side, ChessPiece};
 pub use crate::chessmove::{ChessMove, LexiOrd};
 pub use crate::square::Square;
-pub use crate::search::{Evaluator, NegamaxData, MATERIAL_EVAL};
+pub use crate::search::{Evaluator, NegamaxData, MATERIAL_EVAL, MaterialEvaluator};
 pub use crate::transposition::{AtomicTranspositionTable, TranspositionTable, PositionData, NodeType};
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GameState {
@@ -98,7 +98,7 @@ impl ChessBoard {
         }
         return false;
     }
-    
+
     #[inline(always)]
     pub fn update_state(&mut self, chess_move:& ChessMove) {
         self.core.update_state(chess_move);
@@ -184,12 +184,36 @@ impl ChessBoard {
     //    }
     //    return self.core.generate_moves();
     //}
+    
+    //tries to check the game-state without generating all the chess moves.  in the event that extensive move generation is done, returns a move list
+    pub fn try_check_state(&self) -> (Option<Vec<ChessMove>>, GameState) {
+        if self.repetition() >= 3 || self.is_fifty_move_rule()  {
+            return (None, GameState::Finished(GameResult::Draw))
+        }
+
+        if self.core.is_king_move_available() || self.core.is_knight_move_available() {
+            return (None, GameState::Ongoing)
+        }
+
+        let skip: Option<Vec<PieceType>> = Some(vec![PieceType::King, PieceType::Knight]);
+        let moves: Vec<ChessMove> = self.core.generate_moves(skip);
+        if moves.len() != 0 {
+            return (Some(moves),GameState::Ongoing);
+        } else if self.is_king_in_check(Side::White) {
+            return (None,GameState::Finished(GameResult::BlackWins));
+        } else if self.is_king_in_check(Side::Black) {
+            return (None,GameState::Finished(GameResult::WhiteWins));
+        } else { //stalemate
+            return (None, GameState::Finished(GameResult::Draw));
+        }
+    }
 
     pub fn try_generate_moves(&self) -> (Vec<ChessMove>, GameState) {
-        if self.zt.count_hash(self.core.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
+        if  self.repetition() >= 3 || self.is_fifty_move_rule()  {
             return (Vec::new(), GameState::Finished(GameResult::Draw))
         }
-        let moves = self.core.generate_moves();
+        
+        let moves = self.core.generate_moves(None);
         if moves.len() != 0 {
             return (moves,GameState::Ongoing);
         } else if self.is_king_in_check(Side::White) {
@@ -205,7 +229,8 @@ impl ChessBoard {
         if self.zt.count_hash(self.core.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
             return (Vec::new(), GameState::Finished(GameResult::Draw))
         }
-        let moves = self.core.generate_captures();
+
+        let moves = self.core.generate_captures(None);
         if moves.len() != 0 {
             return (moves,GameState::Ongoing);
         } else if self.is_king_in_check(Side::White) {

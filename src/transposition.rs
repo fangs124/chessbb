@@ -166,7 +166,7 @@ impl IndexMut<&ZobristHash> for [PositionData] {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TranspositionTable {
     data: Box<[PositionData; DEFAULT_SIZE]>,
-}
+} //syn: what most people do (I think?) is count how many of the first 1000 entries are of the current age
 
 //const foo: usize = size_of::<TranspositionTable>();
 //const foo: usize = size_of::<NodeData>();
@@ -396,5 +396,16 @@ impl AtomicTranspositionTable {
     #[inline(always)]
     pub(crate) fn load(&self, hash: &ZobristHash, order: Ordering) -> PositionData {
         self.data[hash].load(order)
+    }
+
+    #[inline(always)]
+    pub fn permil_count(&self) -> usize {
+        let mut total: usize = 0;
+        for i in 0..1000 {
+            if self.data[i].0.load(Ordering::Relaxed).ty != NodeType::None {
+                total += 1;
+            }
+        }
+        return total;
     }
 }

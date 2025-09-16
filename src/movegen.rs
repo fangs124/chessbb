@@ -29,8 +29,43 @@ impl ChessBoardCore {
         chess_moves.sort_by_cached_key(|a| self.mvv_score(a));
     }
 
+    pub fn is_king_move_available(&self) -> bool {
+        let king_square = self.piece_bb((self.side(), PieceType::King)).lsb_square().unwrap();
+        return self.is_normal_move_available(king_square, PieceType::King);
+    }
+
+    pub fn is_knight_move_available(&self) -> bool {
+        // consider if king is in check
+        let checkers_count = self.check_bb.count_ones();
+
+        // if double check, king move (triple and higher checks impossible?)
+        if checkers_count >= 2 {
+            return false;
+        }
+
+        let mut sources: BitBoard = self.piece_bb((self.side(), PieceType::Knight));
+        let mut is_move_available: bool = false;
+
+        while sources.is_not_zero() && is_move_available == false {
+            let source: Square = sources.lsb_square().unwrap();
+            let pinned_pieces = self.pinned_bb;
+
+            // pinned knights can not move
+            if pinned_pieces.nth_is_not_zero(source) {
+                sources.pop_bit(source);
+                continue;
+            }
+
+            /* moves and attacks */
+            is_move_available |= self.is_normal_move_available(source, PieceType::Knight);
+            sources.pop_bit(source);
+        }
+
+        return is_move_available;
+    }
+
     //positively tests if a move is illegal
-    fn is_move_illegal(&self, chess_move: &ChessMove) -> bool {
+    pub fn is_move_illegal(&self, chess_move: &ChessMove) -> bool {
         //move types: normal, castle, enpassant, promotion
         let source: Square = chess_move.source();
         let target: Square = chess_move.target();
@@ -411,7 +446,7 @@ impl ChessBoardCore {
         self.compute_pin_data();
     }
 
-    pub fn generate_moves(&self) -> Vec<ChessMove> {
+    pub fn generate_moves(&self, skip: Option<Vec<PieceType>>) -> Vec<ChessMove> {
         let mut moves: Vec<ChessMove> = Vec::new();
         let mut king_moves: Vec<ChessMove> = Vec::new();
         let side = self.side_to_move;
@@ -420,6 +455,9 @@ impl ChessBoardCore {
         let checkers_count = self.check_bb.count_ones();
 
         for &piece_type in PieceType::iterator() {
+            if skip.as_ref().map_or_else(|| false, |skip| skip.contains(&piece_type)) {
+                continue;
+            }
             // if double check, king move (triple and higher checks impossible?)
             if checkers_count >= 2 && piece_type != PieceType::King {
                 continue;
@@ -485,7 +523,7 @@ impl ChessBoardCore {
         return moves;
     }
 
-    pub fn generate_captures(&self) -> Vec<ChessMove> {
+    pub fn generate_captures(&self, skip: Option<Vec<PieceType>>) -> Vec<ChessMove> {
         let mut moves: Vec<ChessMove> = Vec::new();
         let mut king_moves: Vec<ChessMove> = Vec::new();
         let side = self.side_to_move;
@@ -494,6 +532,9 @@ impl ChessBoardCore {
         let checkers_count = self.check_bb.count_ones();
 
         for &piece_type in PieceType::iterator() {
+            if skip.as_ref().map_or_else(|| false, |skip| skip.contains(&piece_type)) {
+                continue;
+            }
             // if double check, king move (triple and higher checks impossible?)
             if checkers_count >= 2 && piece_type != PieceType::King {
                 continue;
@@ -537,6 +578,65 @@ impl ChessBoardCore {
         }
         moves.append(&mut king_moves);
         return moves;
+    }
+
+    fn is_normal_move_available(&self, source: Square, piece_type: PieceType) -> bool {
+        //pawn rules are complex, best handled separately, use calculate_pawn_moves()
+        if matches!(piece_type, PieceType::Pawn) {
+            //TODO make this less hacky and expensive
+            return !self.calculate_pawn_moves(source).is_empty();
+        }
+
+        let check_mask = self.check_mask;
+        let side: Side = self.side_to_move;
+        let blockers: BitBoard = self.blockers();
+        let (friends, enemies) = match side {
+            Side::White => (self.white_blockers(), self.black_blockers()),
+            Side::Black => (self.black_blockers(), self.white_blockers()),
+        };
+
+        let mut targets: BitBoard = match piece_type {
+            PieceType::King => get_king_attack(source).bit_and(&friends.bit_not()),
+            PieceType::Queen => get_queen_attack(source, blockers).bit_and(&friends.bit_not()),
+            PieceType::Knight => get_knight_attack(source).bit_and(&friends.bit_not()),
+            PieceType::Bishop => get_bishop_attack(source, blockers).bit_and(&friends.bit_not()),
+            PieceType::Rook => get_rook_attack(source, blockers).bit_and(&friends.bit_not()),
+            PieceType::Pawn => match side {
+                Side::White => get_w_pawn_attack(source).bit_and(&enemies),
+                Side::Black => get_b_pawn_attack(source).bit_and(&enemies),
+            },
+        };
+
+        // only consider moves along pinning rays, if pinned
+        let pin_mask: BitBoard = self.pin_mask(source);
+        if pin_mask.is_not_zero() {
+            targets = targets.bit_and(&pin_mask);
+        }
+
+        //only consider moves along checking ray if in check, unless piece is your king
+        if self.check_bb.is_not_zero() && piece_type != PieceType::King {
+            targets = targets.bit_and(&check_mask.bit_or(&self.check_bb));
+        }
+
+        while targets.is_not_zero() {
+            let target = targets.lsb_square().unwrap();
+
+            //king: cannot move to a square under attack
+            let blockers = match self.side_to_move {
+                Side::White => self.blockers_no_white_king().bit_and(&BitBoard::nth(target).bit_not()),
+                Side::Black => self.blockers_no_black_king().bit_and(&BitBoard::nth(target).bit_not()),
+            };
+
+            if piece_type == PieceType::King && self.is_square_attacked(target, side.update(), blockers) {
+                targets.pop_bit(target);
+                continue;
+            };
+
+            //append moves
+            return true;
+        }
+
+        return false;
     }
 
     fn calculate_moves(&self, source: Square, piece_type: PieceType) -> Vec<ChessMove> {
