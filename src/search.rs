@@ -164,7 +164,7 @@ impl ChessBoard {
         let mut best_move: Option<ChessMove> = None;
 
         //TODO sort moves here
-        self.core.sort_moves_mvv_score(&mut moves);
+        //self.core.sort_moves_mvv_score(&mut moves);
         //for chess_move in tt_chess_move.into_iter().chain(moves.into_iter()) {
         for chess_move in moves {
             if let Some((start, limit)) = data.time_limit {
@@ -218,7 +218,7 @@ impl ChessBoard {
         return best_value;
     }
 
-    const QUIESCENE_FALLBACK_DEPTH: u16 = 3;
+    const QUIESCENE_FALLBACK_DEPTH: u16 = 4;
 
     fn quiescence_negamax(&mut self, a: i16, b: i16, d: u16, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> i16 {
         data.ply += 1;
@@ -241,7 +241,6 @@ impl ChessBoard {
         }
 
         let (mut moves, game_state) = self.try_generate_captures();
-        self.core.sort_moves_mvv_score(&mut moves);
         if let GameState::Finished(state) = game_state {
             data.ply -= 1;
             match state {
@@ -252,13 +251,18 @@ impl ChessBoard {
             }
         }
 
+        self.core.sort_moves_mvv_score(&mut moves);
         for chess_move in &moves {
             if let Some((start, limit)) = data.time_limit {
                 if data.node_check_count >= data.node_check_limit {
                     if start.elapsed() > limit {
-                        data.ply -= 1;
+                        //when fail high, i.e. best_value >= beta, can return best_value
                         //return best_value; //is the best_move usable here?
-                        return i16::MIN + 1;
+                        data.ply -= 1;
+                        return match best_value >= b {
+                            true => best_value,
+                            false => i16::MIN + 1,
+                        };
                     }
                     data.node_check_count = 0;
                 }
@@ -286,9 +290,10 @@ impl ChessBoard {
 
             if value > alpha {
                 alpha = value;
-                if alpha >= b {
-                    break;
-                }
+            }
+
+            if alpha >= b {
+                break;
             }
         }
 

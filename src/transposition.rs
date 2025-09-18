@@ -234,6 +234,7 @@ pub struct AtomicTranspositionTable {
     data: Box<[AtomicPositionData; DEFAULT_SIZE]>,
 }
 
+pub const ATOMIC_TT_SIZE_MB: usize = size_of::<AtomicPositionData>() * DEFAULT_SIZE / 1048576;
 //const fn check_sync<T: Sync>() {}
 //const _: () = check_sync::<Rc<()>>();
 
