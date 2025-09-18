@@ -25,8 +25,12 @@ impl ChessBoardCore {
         return target_score;
     }
 
-    pub(crate) fn sort_moves(&self, chess_moves: &mut Vec<ChessMove>) {
+    pub(crate) fn sort_moves_mvv_score(&self, chess_moves: &mut Vec<ChessMove>) {
         chess_moves.sort_by_cached_key(|a| self.mvv_score(a));
+    }
+
+    pub(crate) fn sort_moves_mvv_lva_score(&self, chess_moves: &mut Vec<ChessMove>) {
+        chess_moves.sort_by_cached_key(|a| self.mvv_lva_score(a));
     }
 
     pub fn is_king_move_available(&self) -> bool {

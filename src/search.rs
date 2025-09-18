@@ -164,7 +164,7 @@ impl ChessBoard {
         let mut best_move: Option<ChessMove> = None;
 
         //TODO sort moves here
-        //self.core.sort_moves(&mut moves);
+        self.core.sort_moves_mvv_score(&mut moves);
         //for chess_move in tt_chess_move.into_iter().chain(moves.into_iter()) {
         for chess_move in moves {
             if let Some((start, limit)) = data.time_limit {
@@ -221,7 +221,9 @@ impl ChessBoard {
     const QUIESCENE_FALLBACK_DEPTH: u16 = 3;
 
     fn quiescence_negamax(&mut self, a: i16, b: i16, d: u16, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> i16 {
+        data.ply += 1;
         if self.repetition() >= 3 {
+            data.ply -= 1;
             return 0;
         }
 
@@ -230,6 +232,7 @@ impl ChessBoard {
 
         //assuming non-zugzwang?
         if best_value >= b {
+            data.ply -= 1;
             return best_value;
         }
 
@@ -238,7 +241,9 @@ impl ChessBoard {
         }
 
         let (mut moves, game_state) = self.try_generate_captures();
+        self.core.sort_moves_mvv_score(&mut moves);
         if let GameState::Finished(state) = game_state {
+            data.ply -= 1;
             match state {
                 GameResult::WhiteWins | GameResult::BlackWins => {
                     return ((i16::MIN + 2) / 2) + (data.ply as i16); //TODO determine if +d or -d or something else should be used here.
@@ -251,10 +256,21 @@ impl ChessBoard {
             if let Some((start, limit)) = data.time_limit {
                 if data.node_check_count >= data.node_check_limit {
                     if start.elapsed() > limit {
+                        data.ply -= 1;
                         //return best_value; //is the best_move usable here?
                         return i16::MIN + 1;
                     }
                     data.node_check_count = 0;
+                }
+            }
+
+            if let Some(node_limit) = data.node_limit {
+                if data.node_count >= node_limit.get() {
+                    data.ply -= 1;
+                    return match best_value >= b {
+                        true => best_value,
+                        false => i16::MIN + 1,
+                    };
                 }
             }
 
@@ -276,6 +292,7 @@ impl ChessBoard {
             }
         }
 
+        data.ply -= 1;
         return best_value;
     }
 }
