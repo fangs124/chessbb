@@ -17,6 +17,7 @@ const SIDE_HASH: [u64; 1] = [
     0x708def0327105062
 ];
 
+//WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK
 #[rustfmt::skip]
 const PIECE_HASH: [[u64; 12]; 64] = [
     [
