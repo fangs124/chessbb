@@ -4,6 +4,7 @@ use super::chessmove::*;
 use super::*;
 
 impl ChessBoardCore {
+    //100 * targetType - attackerType + 105) //rektdie, chef said to use this
     //assumes move is legal
     pub(crate) fn is_move_capture(&self, chess_move: &ChessMove) -> bool {
         if chess_move.move_type() == MoveType::EnPassant || self.mailbox[chess_move.target().to_usize()].is_some() {
@@ -448,11 +449,11 @@ impl ChessBoardCore {
 
     pub fn generate_moves(&self, skip: Option<Vec<PieceType>>) -> Vec<ChessMove> {
         let mut moves: Vec<ChessMove> = Vec::new();
-        let mut king_moves: Vec<ChessMove> = Vec::new();
-        let side = self.side_to_move;
+        //let mut king_moves: Vec<ChessMove> = Vec::new();
+        let side: Side = self.side_to_move;
 
         // consider if king is in check
-        let checkers_count = self.check_bb.count_ones();
+        let checkers_count: u32 = self.check_bb.count_ones();
 
         for &piece_type in PieceType::iterator() {
             if skip.as_ref().map_or_else(|| false, |skip| skip.contains(&piece_type)) {
@@ -465,6 +466,7 @@ impl ChessBoardCore {
 
             let mut sources = self.piece_bb((side, piece_type));
             while sources.is_not_zero() {
+                let source_bb: BitBoard = sources.lsb_bitboard();
                 let source: Square = sources.lsb_square().unwrap();
                 let pinned_pieces = self.pinned_bb;
 
@@ -490,36 +492,96 @@ impl ChessBoardCore {
                             }
                         }
 
-                        /* moves and attacks */
-                        king_moves.append(&mut self.calculate_moves(source, piece_type));
-                        sources.pop_bit(source);
+                        // /* moves and attacks */
+                        // king_moves.append(&mut self.calculate_moves(source, piece_type));
+                        // sources.pop_bit(source);
                     }
 
                     PieceType::Knight => {
                         // pinned knights can not move
                         if pinned_pieces.nth_is_not_zero(source) {
-                            sources.pop_bit(source);
+                            sources.lsb_pop();
                             continue;
                         }
 
-                        /* moves and attacks */
-                        moves.append(&mut self.calculate_moves(source, piece_type));
-                        sources.pop_bit(source);
+                        // /* moves and attacks */
+                        // moves.append(&mut self.calculate_moves(source, piece_type));
+                        // sources.pop_bit(source);
                     }
 
                     _ => {
-                        /* moves and attacks */
-                        moves.append(&mut self.calculate_moves(source, piece_type));
-                        sources.pop_bit(source);
+                        // /* moves and attacks */
+                        // moves.append(&mut self.calculate_moves(source, piece_type));
+                        // sources.pop_bit(source);
                     }
                 }
 
-                // /* moves and attacks */
-                // moves.append(&mut self.calculate_moves(source, piece_type));
-                // sources.pop_bit(source);
+                /* moves and attacks */
+                moves.append(&mut self.calculate_moves(source, piece_type));
+                sources.lsb_pop();
             }
         }
-        moves.append(&mut king_moves);
+        //moves.append(&mut king_moves);
+        return moves;
+    }
+
+    fn calculate_moves(&self, source: Square, piece_type: PieceType) -> Vec<ChessMove> {
+        //pawn rules are complex, best handled separately, use calculate_pawn_moves()
+        if matches!(piece_type, PieceType::Pawn) {
+            return self.calculate_pawn_moves(source);
+        }
+
+        let check_mask = self.check_mask;
+        let side = self.side_to_move;
+        let blockers: BitBoard = self.blockers();
+        let (friends, enemies) = match side {
+            Side::White => (self.white_blockers(), self.black_blockers()),
+            Side::Black => (self.black_blockers(), self.white_blockers()),
+        };
+
+        let mut moves: Vec<ChessMove> = Vec::with_capacity(40);
+        let mut targets: BitBoard = match piece_type {
+            PieceType::King => get_king_attack(source).bit_and(&friends.bit_not()),
+            PieceType::Queen => get_queen_attack(source, blockers).bit_and(&friends.bit_not()),
+            PieceType::Knight => get_knight_attack(source).bit_and(&friends.bit_not()),
+            PieceType::Bishop => get_bishop_attack(source, blockers).bit_and(&friends.bit_not()),
+            PieceType::Rook => get_rook_attack(source, blockers).bit_and(&friends.bit_not()),
+            PieceType::Pawn => match side {
+                Side::White => get_w_pawn_attack(source).bit_and(&enemies),
+                Side::Black => get_b_pawn_attack(source).bit_and(&enemies),
+            },
+        };
+
+        // only consider moves along pinning rays, if pinned
+        let pin_mask: BitBoard = self.pin_mask(source);
+        if pin_mask.is_not_zero() {
+            targets = targets.bit_and(&pin_mask);
+        }
+
+        //only consider moves along checking ray if in check, unless piece is your king
+        if self.check_bb.is_not_zero() && piece_type != PieceType::King {
+            targets = targets.bit_and(&check_mask.bit_or(&self.check_bb));
+        }
+
+        while targets.is_not_zero() {
+            let target_bb: BitBoard = targets.lsb_bitboard();
+            let target: Square = targets.lsb_square().unwrap();
+
+            //king: cannot move to a square under attack
+            let blockers = match self.side_to_move {
+                Side::White => self.blockers_no_white_king().bit_and(&target_bb.bit_not()),
+                Side::Black => self.blockers_no_black_king().bit_and(&target_bb.bit_not()),
+            };
+
+            if piece_type == PieceType::King && self.is_square_attacked(target, side.update(), blockers) {
+                targets.pop_bit(target);
+                continue;
+            };
+
+            //append moves
+            moves.push(ChessMove::new(source, target, MoveType::Normal));
+            targets.pop_bit(target);
+        }
         return moves;
     }
 
@@ -619,12 +681,13 @@ impl ChessBoardCore {
         }
 
         while targets.is_not_zero() {
-            let target = targets.lsb_square().unwrap();
+            let target_bb: BitBoard = targets.lsb_bitboard();
+            let target: Square = targets.lsb_square().unwrap();
 
             //king: cannot move to a square under attack
             let blockers = match self.side_to_move {
-                Side::White => self.blockers_no_white_king().bit_and(&BitBoard::nth(target).bit_not()),
-                Side::Black => self.blockers_no_black_king().bit_and(&BitBoard::nth(target).bit_not()),
+                Side::White => self.blockers_no_white_king().bit_and(&target_bb.bit_not()),
+                Side::Black => self.blockers_no_black_king().bit_and(&target_bb.bit_not()),
             };
 
             if piece_type == PieceType::King && self.is_square_attacked(target, side.update(), blockers) {
@@ -637,65 +700,6 @@ impl ChessBoardCore {
         }
 
         return false;
-    }
-
-    fn calculate_moves(&self, source: Square, piece_type: PieceType) -> Vec<ChessMove> {
-        //pawn rules are complex, best handled separately, use calculate_pawn_moves()
-        if matches!(piece_type, PieceType::Pawn) {
-            return self.calculate_pawn_moves(source);
-        }
-
-        let check_mask = self.check_mask;
-        let side = self.side_to_move;
-        let blockers: BitBoard = self.blockers();
-        let (friends, enemies) = match side {
-            Side::White => (self.white_blockers(), self.black_blockers()),
-            Side::Black => (self.black_blockers(), self.white_blockers()),
-        };
-
-        let mut moves: Vec<ChessMove> = Vec::with_capacity(40);
-        let mut targets: BitBoard = match piece_type {
-            PieceType::King => get_king_attack(source).bit_and(&friends.bit_not()),
-            PieceType::Queen => get_queen_attack(source, blockers).bit_and(&friends.bit_not()),
-            PieceType::Knight => get_knight_attack(source).bit_and(&friends.bit_not()),
-            PieceType::Bishop => get_bishop_attack(source, blockers).bit_and(&friends.bit_not()),
-            PieceType::Rook => get_rook_attack(source, blockers).bit_and(&friends.bit_not()),
-            PieceType::Pawn => match side {
-                Side::White => get_w_pawn_attack(source).bit_and(&enemies),
-                Side::Black => get_b_pawn_attack(source).bit_and(&enemies),
-            },
-        };
-
-        // only consider moves along pinning rays, if pinned
-        let pin_mask: BitBoard = self.pin_mask(source);
-        if pin_mask.is_not_zero() {
-            targets = targets.bit_and(&pin_mask);
-        }
-
-        //only consider moves along checking ray if in check, unless piece is your king
-        if self.check_bb.is_not_zero() && piece_type != PieceType::King {
-            targets = targets.bit_and(&check_mask.bit_or(&self.check_bb));
-        }
-
-        while targets.is_not_zero() {
-            let target = targets.lsb_square().unwrap();
-
-            //king: cannot move to a square under attack
-            let blockers = match self.side_to_move {
-                Side::White => self.blockers_no_white_king().bit_and(&BitBoard::nth(target).bit_not()),
-                Side::Black => self.blockers_no_black_king().bit_and(&BitBoard::nth(target).bit_not()),
-            };
-
-            if piece_type == PieceType::King && self.is_square_attacked(target, side.update(), blockers) {
-                targets.pop_bit(target);
-                continue;
-            };
-
-            //append moves
-            moves.push(ChessMove::new(source, target, MoveType::Normal));
-            targets.pop_bit(target);
-        }
-        return moves;
     }
 
     fn calculate_captures(&self, source: Square, piece_type: PieceType) -> Vec<ChessMove> {
@@ -738,12 +742,13 @@ impl ChessBoardCore {
         }
 
         while targets.is_not_zero() {
+            let target_bb: BitBoard = targets.lsb_bitboard();
             let target = targets.lsb_square().unwrap();
 
             //king: cannot move to a square under attack
             let blockers = match self.side_to_move {
-                Side::White => self.blockers_no_white_king().bit_and(&BitBoard::nth(target).bit_not()),
-                Side::Black => self.blockers_no_black_king().bit_and(&BitBoard::nth(target).bit_not()),
+                Side::White => self.blockers_no_white_king().bit_and(&target_bb.bit_not()),
+                Side::Black => self.blockers_no_black_king().bit_and(&target_bb.bit_not()),
             };
 
             if piece_type == PieceType::King && self.is_square_attacked(target, side.update(), blockers) {
@@ -825,7 +830,6 @@ impl ChessBoardCore {
                     Side::Black => Square::new(source.to_u8() - 16),
                 };
 
-                //TODO maybe change this to make it less expensive?
                 //can only move two-squares if pawn is in starting row, and next two squares are empty
                 if blockers.bit_and(&BitBoard::nth(next).bit_or(&BitBoard::nth(target))).is_zero() {
                     // can only move two-squares if not in check, or blocks check
@@ -888,8 +892,7 @@ impl ChessBoardCore {
                     Side::Black => (cpt_index!(R), cpt_index!(Q), cpt_index!(P), Square::new(attack.to_u8() + 8u8)),
                 };
 
-                //if (chessboard.piece_bbs[enemy_rook_index].bit_or(&chessboard.piece_bbs[king_index])).bit_and(&king_row_bb).count_ones() >= 2
-                //if enemy rook and friendly king is in the same row, check for special case
+                //if enemy rook or enemy queen and friendly king is in the same row, check for special case
                 if self.piece_bbs[enemy_rook_index].bit_and(&special_row_bb).is_not_zero()
                     || self.piece_bbs[enemy_queen_index].bit_and(&special_row_bb).is_not_zero()
                 {

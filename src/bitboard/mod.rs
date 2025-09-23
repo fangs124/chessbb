@@ -156,6 +156,16 @@ impl BitBoard {
     //    self.data & !(1u64 << i)
     //}
 
+    #[inline(always)]
+    pub(crate) const fn lsb_bitboard(&self) -> BitBoard {
+        return BitBoard{data :self.data & self.data.wrapping_neg()};
+    }
+
+    #[inline(always)]
+    pub(crate) const fn lsb_pop(&mut self) {
+        self.data &= self.data - 1
+    }
+
     // index of least-significant-bit (lsb)
     #[inline(always)]
     pub(crate) const fn lsb_index(&self) -> Option<usize> {

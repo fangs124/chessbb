@@ -56,15 +56,24 @@ pub struct NegamaxData {
     node_check_count: usize,
     node_check_limit: usize,
     time_limit: Option<(Instant, Duration)>,
+    is_aborted: bool,
 }
 
 impl NegamaxData {
     pub fn new(node_limit: Option<NonZero<usize>>, time_limit: Option<(Instant, Duration)>) -> Self {
-        NegamaxData { ply: 0, node_count: 0, node_limit, node_check_count: 0, node_check_limit: DEFAULT_NODE_CHECK_COUNT_LIMIT, time_limit }
+        NegamaxData { ply: 0, node_count: 0, node_limit, node_check_count: 0, node_check_limit: DEFAULT_NODE_CHECK_COUNT_LIMIT, time_limit, is_aborted: false }
     }
     #[inline(always)]
     pub fn new_no_limit() -> Self {
-        NegamaxData { ply: 0, node_count: 0, node_limit: None, node_check_count: 0, node_check_limit: DEFAULT_NODE_CHECK_COUNT_LIMIT, time_limit: None }
+        NegamaxData {
+            ply: 0,
+            node_count: 0,
+            node_limit: None,
+            node_check_count: 0,
+            node_check_limit: DEFAULT_NODE_CHECK_COUNT_LIMIT,
+            time_limit: None,
+            is_aborted: false,
+        }
     }
 
     #[inline(always)]
@@ -76,6 +85,7 @@ impl NegamaxData {
             node_check_count: 0,
             node_check_limit: DEFAULT_NODE_CHECK_COUNT_LIMIT,
             time_limit: Some((start, limit)),
+            is_aborted: false,
         }
     }
 
@@ -88,6 +98,7 @@ impl NegamaxData {
             node_check_count: 0,
             node_check_limit: DEFAULT_NODE_CHECK_COUNT_LIMIT,
             time_limit: None,
+            is_aborted: false,
         }
     }
 
@@ -104,6 +115,11 @@ impl NegamaxData {
     #[inline(always)]
     pub fn set_ply(&mut self, ply: u16) {
         self.ply = ply;
+    }
+
+    #[inline(always)]
+    pub fn is_aborted(&self) -> bool {
+        self.is_aborted
     }
 }
 
@@ -157,6 +173,12 @@ impl ChessBoard {
                 }
                 _ => (),
             }
+
+            //if let Some(data_move) = position_data.best() {
+            //    if !self.core.is_move_illegal(&data_move) {
+            //        tt_chess_move = Some(data_move);
+            //    }
+            //}
         }
 
         let mut alpha: i16 = a;
@@ -170,9 +192,10 @@ impl ChessBoard {
             if let Some((start, limit)) = data.time_limit {
                 if data.node_check_count >= data.node_check_limit {
                     if start.elapsed() > limit {
+                        data.is_aborted = true;
+                        data.ply -= 1;
                         //when fail high, i.e. best_value >= beta, can return best_value
                         //return best_value; //is the best_move usable here?
-                        data.ply -= 1;
                         return match best_value >= b {
                             true => best_value,
                             false => i16::MIN + 1,
@@ -184,6 +207,7 @@ impl ChessBoard {
 
             if let Some(node_limit) = data.node_limit {
                 if data.node_count >= node_limit.get() {
+                    data.is_aborted = true;
                     data.ply -= 1;
                     return match best_value >= b {
                         true => best_value,
