@@ -6,6 +6,7 @@ use super::*;
 impl ChessBoardCore {
     //100 * targetType - attackerType + 105) //rektdie, chef said to use this
     //assumes move is legal
+    #[inline(always)]
     pub(crate) fn is_move_capture(&self, chess_move: &ChessMove) -> bool {
         if chess_move.move_type() == MoveType::EnPassant || self.mailbox[chess_move.target().to_usize()].is_some() {
             return true;
@@ -13,21 +14,22 @@ impl ChessBoardCore {
         return false;
     }
 
+    #[inline(always)]
     pub(crate) fn mvv_lva_score(&self, chess_move: &ChessMove) -> i16 {
         let source_score: i16 = self.mailbox[chess_move.source().to_usize()].unwrap().1.value();
         let target_score: i16 = self.mailbox[chess_move.target().to_usize()].map_or(0, |x| x.1.value());
 
-        return (100 * target_score) - source_score;
+        return (100 * target_score) - source_score + 105;
     }
 
+    #[inline(always)]
     pub(crate) fn mvv_score(&self, chess_move: &ChessMove) -> i16 {
-        let target_score: i16 = self.mailbox[chess_move.target().to_usize()].map_or(0, |x| x.1.value());
-
-        return target_score;
+        return self.mailbox[chess_move.target().to_usize()].map_or(0, |x| x.1 as i16);
     }
 
+    #[inline(always)]
     pub(crate) fn sort_moves(&self, chess_moves: &mut Vec<ChessMove>) {
-        chess_moves.sort_by_cached_key(|a| self.mvv_score(a));
+        chess_moves.sort_by_key(|a| self.mvv_score(a));
     }
 
     pub fn is_king_move_available(&self) -> bool {

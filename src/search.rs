@@ -147,8 +147,8 @@ impl ChessBoard {
 
         if d == 0 {
             data.ply -= 1;
-            return ev.eval(self);
-            //return self.quiescence_negamax(a, b, ChessBoard::QUIESCENE_FALLBACK_DEPTH, ev, data, tt);
+            //return ev.eval(self);
+            return self.quiescence_negamax(a, b, ChessBoard::QUIESCENE_FALLBACK_DEPTH, ev, data, tt);
         }
 
         let mut moves = moves.unwrap_or_else(|| self.core.generate_moves(None));
@@ -245,15 +245,27 @@ impl ChessBoard {
     const QUIESCENE_FALLBACK_DEPTH: u16 = 3;
 
     fn quiescence_negamax(&mut self, a: i16, b: i16, d: u16, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> i16 {
-        if self.repetition() >= 3 {
+        data.ply += 1;
+        if self.repetition() >= 3 || self.is_fifty_move_rule() {
             return 0;
         }
+        //let (moves, game_state) = self.try_check_state();
+        //if let GameState::Finished(state) = game_state {
+        //    data.ply -= 1;
+        //    match state {
+        //        GameResult::WhiteWins | GameResult::BlackWins => {
+        //            return ((i16::MIN + 2) / 2) + (data.ply as i16); //TODO determine if +d or -d or something else should be used here.
+        //        }
+        //        GameResult::Draw => return 0,
+        //    }
+        //}
 
         let mut best_value: i16 = ev.eval(&self);
         let mut alpha = a;
 
         //assuming non-zugzwang?
         if best_value >= b {
+            data.ply -= 1;
             return best_value;
         }
 
@@ -261,24 +273,38 @@ impl ChessBoard {
             alpha = best_value;
         }
 
-        let (mut moves, game_state) = self.try_generate_captures();
-        if let GameState::Finished(state) = game_state {
-            match state {
-                GameResult::WhiteWins | GameResult::BlackWins => {
-                    return ((i16::MIN + 2) / 2) + (data.ply as i16); //TODO determine if +d or -d or something else should be used here.
-                }
-                GameResult::Draw => return 0,
-            }
-        }
-
+        //let (mut moves, game_state) = self.try_generate_captures();
+        //let mut moves = moves.unwrap_or_else(|| self.core.generate_captures(None));
+        let moves = self.core.generate_captures(None);
         for chess_move in &moves {
+            //if !self.core.is_move_capture(chess_move) {
+            //    continue;
+            //}
+
             if let Some((start, limit)) = data.time_limit {
                 if data.node_check_count >= data.node_check_limit {
                     if start.elapsed() > limit {
+                        data.is_aborted = true;
+                        data.ply -= 1;
+                        //when fail high, i.e. best_value >= beta, can return best_value
                         //return best_value; //is the best_move usable here?
-                        return i16::MIN + 1;
+                        return match best_value >= b {
+                            true => best_value,
+                            false => i16::MIN + 1,
+                        };
                     }
                     data.node_check_count = 0;
+                }
+            }
+
+            if let Some(node_limit) = data.node_limit {
+                if data.node_count >= node_limit.get() {
+                    data.is_aborted = true;
+                    data.ply -= 1;
+                    return match best_value >= b {
+                        true => best_value,
+                        false => i16::MIN + 1,
+                    };
                 }
             }
 
@@ -294,12 +320,14 @@ impl ChessBoard {
 
             if value > alpha {
                 alpha = value;
-                if alpha >= b {
-                    break;
-                }
+            }
+
+            if alpha >= b {
+                break;
             }
         }
 
+        data.ply -= 1;
         return best_value;
     }
 }
