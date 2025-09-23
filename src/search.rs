@@ -242,7 +242,7 @@ impl ChessBoard {
         return best_value;
     }
 
-    const QUIESCENE_FALLBACK_DEPTH: u16 = 3;
+    const QUIESCENE_FALLBACK_DEPTH: u16 = 7;
 
     fn quiescence_negamax(&mut self, a: i16, b: i16, d: u16, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>) -> i16 {
         data.ply += 1;
@@ -275,7 +275,8 @@ impl ChessBoard {
 
         //let (mut moves, game_state) = self.try_generate_captures();
         //let mut moves = moves.unwrap_or_else(|| self.core.generate_captures(None));
-        let moves = self.core.generate_captures(None);
+        let mut moves = self.core.generate_captures(None);
+        self.core.sort_moves(&mut moves);
         for chess_move in &moves {
             //if !self.core.is_move_capture(chess_move) {
             //    continue;
