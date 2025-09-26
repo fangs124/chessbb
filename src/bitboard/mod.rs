@@ -33,28 +33,17 @@ impl Side {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PieceType {
-    Pawn,
-    Knight,
-    Bishop,
-    Rook,
-    Queen,
-    King,
+    Pawn = 1,
+    Knight = 3,
+    Bishop = 4,
+    Rook = 5,
+    Queen = 9,
+    King = 100,
 }
 
 //const FOO :i16 = i16::MAX;
 
 impl PieceType {
-    pub fn value(&self) -> i16 {
-        match self {
-            PieceType::Pawn => 1,
-            PieceType::Knight => 3,
-            PieceType::Bishop => 3,
-            PieceType::Rook => 5,
-            PieceType::Queen => 9,
-            PieceType::King => 100,
-        }
-    }
-
     const PIECETYPES: [PieceType; 6] =
             [PieceType::King ,PieceType::Queen, PieceType::Knight, PieceType::Bishop, PieceType::Rook, PieceType::Pawn];
     pub fn iterator() -> std::slice::Iter<'static, PieceType> {
@@ -107,18 +96,12 @@ impl BitBoard {
 
     #[inline(always)]
     pub(crate) const fn nth_is_zero(&self, sq: Square) -> bool {
-        match self.data & (1u64 << sq.to_usize()) {
-            0 => true,
-            _ => false,
-        }
+        self.data & (1u64 << sq.to_usize()) == 0
     }
 
     #[inline(always)]
     pub(crate) const fn nth_is_not_zero(&self, sq: Square) -> bool {
-        match self.data & (1u64 << sq.to_usize()) {
-            0 => false,
-            _ => true,
-        }
+        self.data & (1u64 << sq.to_usize()) != 0
     }
 
     #[inline(always)]

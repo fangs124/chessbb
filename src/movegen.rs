@@ -1,5 +1,3 @@
-use std::ops::BitAnd;
-
 use super::chessmove::*;
 use super::*;
 
@@ -16,20 +14,20 @@ impl ChessBoardCore {
 
     #[inline(always)]
     pub(crate) fn mvv_lva_score(&self, chess_move: &ChessMove) -> i16 {
-        let source_score: i16 = self.mailbox[chess_move.source().to_usize()].unwrap().1.value();
-        let target_score: i16 = self.mailbox[chess_move.target().to_usize()].map_or(0, |x| x.1.value());
-
+        let source_score: i16 = self.mailbox[chess_move.source().to_usize()].unwrap().1 as i16;
+        let target_score: i16 = self.mailbox[chess_move.target().to_usize()].map_or(0, |x| x.1 as i16);
+        //i16: [-32768, 32767]
         return (100 * target_score) - source_score + 105;
     }
 
     #[inline(always)]
     pub(crate) fn mvv_score(&self, chess_move: &ChessMove) -> i16 {
-        return self.mailbox[chess_move.target().to_usize()].map_or(0, |x| x.1 as i16);
+        return self.mailbox[chess_move.target().to_usize()].map_or(0, |x| (x.1) as i16 + 1);
     }
 
     #[inline(always)]
     pub(crate) fn sort_moves(&self, chess_moves: &mut Vec<ChessMove>) {
-        chess_moves.sort_by_key(|a| self.mvv_score(a));
+        chess_moves.sort_by_cached_key(|a| self.mvv_lva_score(a));
     }
 
     pub fn is_king_move_available(&self) -> bool {

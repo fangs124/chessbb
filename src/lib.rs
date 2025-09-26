@@ -18,7 +18,7 @@ use crate::{
 pub use crate::bitboard::{PieceType, Side, ChessPiece};
 pub use crate::chessmove::{ChessMove, LexiOrd};
 pub use crate::square::Square;
-pub use crate::search::{Evaluator, NegamaxData, MATERIAL_EVAL, MaterialEvaluator};
+pub use crate::search::{Evaluator, NegamaxData, MATERIAL_EVAL, MaterialEvaluator, LOSE_SCORE, WIN_SCORE};
 pub use crate::transposition::{AtomicTranspositionTable, TranspositionTable, PositionData, NodeType};
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GameState {
@@ -184,7 +184,7 @@ impl ChessBoard {
     //    }
     //    return self.core.generate_moves();
     //}
-    
+
     //tries to check the game-state without generating all the chess moves.  in the event that extensive move generation is done, returns a move list
     pub fn try_check_state(&self) -> (Option<Vec<ChessMove>>, GameState) {
         if self.repetition() >= 3 || self.is_fifty_move_rule()  {
@@ -460,11 +460,12 @@ impl ChessBoardCore {
         chessboard.mailbox = [None; 64];
         chessboard.castle_bools = [false, false, false, false];
 
-
+        // example fen: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
         // parse piece placement data
         let mut square: usize = 0;
         for c in input_vec[0].chars().rev() {
-            //println!("c:{}", c);
+            // example fen after transformation:
+            // RNBKQBNR/PPPPPPPP/8/8/8/8/pppppppp/rnbkqbnr
             match c {
                 'K' |'Q' |'N' |'B' |'R' |'P' |'k' |'q' |'n' |'b' |'r' |'p' => {
                     chessboard.piece_bbs[sym_index(c)].set_bit(Square::new(square as u8));

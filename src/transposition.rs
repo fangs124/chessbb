@@ -203,6 +203,17 @@ impl TranspositionTable {
     pub(crate) fn look_up(&self, hash: &ZobristHash) -> PositionData {
         self.data[hash]
     }
+
+    #[inline(always)]
+    pub fn permil_count(&self) -> usize {
+        let mut total: usize = 0;
+        for i in 0..1000 {
+            if self.data[i].ty != NodeType::None {
+                total += 1;
+            }
+        }
+        return total;
+    }
 }
 
 //#[derive(Debug, Copy, Clone, PartialEq, Eq)]

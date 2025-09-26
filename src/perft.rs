@@ -27,7 +27,7 @@ impl ChessBoardCore {
 
 //FIXME wtf is this
 impl ChessBoard {
-    pub fn perft_count(&mut self, depth: usize) -> u64 {
+    pub fn perft_count_bulk(&mut self, depth: usize) -> u64 {
         if depth == 0 {
             // this is used when printing the individual moves in a given position
             return 1;
@@ -37,6 +37,18 @@ impl ChessBoard {
         if depth == 1 {
             return moves.len() as u64;
         }
+        let mut total: u64 = 0;
+        total += self.core.perft_count(&mut self.zt, depth);
+        return total;
+    }
+
+    pub fn perft_count(&mut self, depth: usize) -> u64 {
+        if depth == 0 {
+            // this is used when printing the individual moves in a given position
+            return 1;
+        }
+
+        let moves = self.try_generate_moves().0;
         let mut total: u64 = 0;
         total += self.core.perft_count(&mut self.zt, depth);
         return total;

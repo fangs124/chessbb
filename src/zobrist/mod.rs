@@ -79,6 +79,7 @@ impl ZobristHash {
     pub const fn to_index(&self) -> usize {
         return self.value as usize;
     }
+
     pub(super) const fn initial_hash() -> ZobristHash {
         let mut value: u64 = 0;
 
@@ -104,8 +105,7 @@ impl ZobristHash {
         return ZobristHash { value };
     }
 
-    #[rustfmt::skip]
-    pub(super) const fn compute_hash(side: Side,mb: [Option<ChessPiece>; 64],castle: [bool; 4],enpassant: BitBoard) -> ZobristHash {
+    pub(super) const fn compute_hash(side: Side, mb: [Option<ChessPiece>; 64], castle: [bool; 4], enpassant: BitBoard) -> ZobristHash {
         //side hash
         let mut value = match side {
             crate::bitboard::Side::White => 0u64,
