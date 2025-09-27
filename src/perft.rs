@@ -2,7 +2,7 @@ use crate::{ChessBoard, ChessBoardCore, zobrist::ZobristTable};
 
 //FIXME wtf is this
 impl ChessBoardCore {
-    pub fn perft_count(&self, zobrist_table: &mut ZobristTable, depth: usize) -> u64 {
+    pub fn perft_count_bulk(&self, zobrist_table: &mut ZobristTable, depth: usize) -> u64 {
         if depth == 0 {
             // this is used when printing the individual moves in a given position
             return 1;
@@ -12,6 +12,26 @@ impl ChessBoardCore {
         if depth == 1 {
             return moves.len() as u64;
         }
+
+        let mut total: u64 = 0;
+        for chessmove in moves {
+            let mut new_chessboard: ChessBoardCore = *self;
+            new_chessboard.update_state(&chessmove);
+            let current_hash = new_chessboard.hash();
+            zobrist_table.add(current_hash);
+            total += new_chessboard.perft_count(zobrist_table, depth - 1);
+            zobrist_table.remove_last(current_hash);
+        }
+        return total;
+    }
+
+    pub fn perft_count(&self, zobrist_table: &mut ZobristTable, depth: usize) -> u64 {
+        if depth == 0 {
+            // this is used when printing the individual moves in a given position
+            return 1;
+        }
+
+        let moves = self.generate_moves(None);
         let mut total: u64 = 0;
         for chessmove in moves {
             let mut new_chessboard: ChessBoardCore = *self;
@@ -33,12 +53,12 @@ impl ChessBoard {
             return 1;
         }
 
-        let moves = self.try_generate_moves().0;
         if depth == 1 {
+            let moves = self.try_generate_moves().0;
             return moves.len() as u64;
         }
         let mut total: u64 = 0;
-        total += self.core.perft_count(&mut self.zt, depth);
+        total += self.core.perft_count_bulk(&mut self.zt, depth);
         return total;
     }
 
@@ -48,7 +68,6 @@ impl ChessBoard {
             return 1;
         }
 
-        let moves = self.try_generate_moves().0;
         let mut total: u64 = 0;
         total += self.core.perft_count(&mut self.zt, depth);
         return total;
