@@ -448,7 +448,7 @@ impl ChessBoardCore {
     }
 
     pub fn generate_moves(&self, skip: Option<Vec<PieceType>>) -> Vec<ChessMove> {
-        let mut moves: Vec<ChessMove> = Vec::new();
+        let mut moves: Vec<ChessMove> = Vec::with_capacity(40);
         //let mut king_moves: Vec<ChessMove> = Vec::new();
         let side: Side = self.side_to_move;
 
@@ -517,7 +517,7 @@ impl ChessBoardCore {
                 }
 
                 /* moves and attacks */
-                moves.append(&mut self.calculate_moves(source, piece_type));
+                self.calculate_moves(source, piece_type, &mut moves);
                 sources.lsb_pop();
             }
         }
@@ -525,10 +525,11 @@ impl ChessBoardCore {
         return moves;
     }
 
-    fn calculate_moves(&self, source: Square, piece_type: PieceType) -> Vec<ChessMove> {
+    fn calculate_moves(&self, source: Square, piece_type: PieceType, moves: &mut Vec<ChessMove>) {
         //pawn rules are complex, best handled separately, use calculate_pawn_moves()
         if matches!(piece_type, PieceType::Pawn) {
-            return self.calculate_pawn_moves(source);
+            self.calculate_pawn_moves(source, moves);
+            return;
         }
 
         let check_mask = self.check_mask;
@@ -580,14 +581,14 @@ impl ChessBoardCore {
 
             //append moves
             moves.push(ChessMove::new(source, target, MoveType::Normal));
-            targets.pop_bit(target);
+            targets.lsb_pop();
         }
-        return moves;
+
+        return;
     }
 
     pub fn generate_captures(&self, skip: Option<Vec<PieceType>>) -> Vec<ChessMove> {
-        let mut moves: Vec<ChessMove> = Vec::new();
-        let mut king_moves: Vec<ChessMove> = Vec::new();
+        let mut moves: Vec<ChessMove> = Vec::with_capacity(40);
         let side = self.side_to_move;
 
         // consider if king is in check
@@ -609,9 +610,9 @@ impl ChessBoardCore {
 
                 match piece_type {
                     PieceType::King => {
-                        /* moves and attacks */
-                        king_moves.append(&mut self.calculate_captures(source, piece_type));
-                        sources.pop_bit(source);
+                        // /* moves and attacks */
+                        // king_moves.append(&mut self.calculate_captures(source, piece_type, &mut moves));
+                        // sources.pop_bit(source);
                     }
 
                     PieceType::Knight => {
@@ -621,24 +622,23 @@ impl ChessBoardCore {
                             continue;
                         }
 
-                        /* moves and attacks */
-                        moves.append(&mut self.calculate_captures(source, piece_type));
-                        sources.pop_bit(source);
+                        // /* moves and attacks */
+                        // moves.append(&mut self.calculate_captures(source, piece_type));
+                        // sources.pop_bit(source);
                     }
 
                     _ => {
-                        /* moves and attacks */
-                        moves.append(&mut self.calculate_captures(source, piece_type));
-                        sources.pop_bit(source);
+                        // /* moves and attacks */
+                        // moves.append(&mut self.calculate_captures(source, piece_type));
+                        // sources.pop_bit(source);
                     }
                 }
 
-                // /* moves and attacks */
-                // moves.append(&mut self.calculate_moves(source, piece_type));
-                // sources.pop_bit(source);
+                /* moves and attacks */
+                self.calculate_captures(source, piece_type, &mut moves);
+                sources.lsb_pop();
             }
         }
-        moves.append(&mut king_moves);
         return moves;
     }
 
@@ -646,7 +646,9 @@ impl ChessBoardCore {
         //pawn rules are complex, best handled separately, use calculate_pawn_moves()
         if matches!(piece_type, PieceType::Pawn) {
             //TODO make this less hacky and expensive
-            return !self.calculate_pawn_moves(source).is_empty();
+            let mut moves: Vec<ChessMove> = Vec::new();
+            self.calculate_pawn_moves(source, &mut moves);
+            return !moves.is_empty();
         }
 
         let check_mask = self.check_mask;
@@ -702,10 +704,11 @@ impl ChessBoardCore {
         return false;
     }
 
-    fn calculate_captures(&self, source: Square, piece_type: PieceType) -> Vec<ChessMove> {
+    fn calculate_captures(&self, source: Square, piece_type: PieceType, moves: &mut Vec<ChessMove>) {
         //pawn rules are complex, best handled separately, use calculate_pawn_moves()
         if matches!(piece_type, PieceType::Pawn) {
-            return self.calculate_pawn_captures(source);
+            self.calculate_pawn_captures(source, moves);
+            return;
         }
 
         let check_mask = self.check_mask;
@@ -716,7 +719,6 @@ impl ChessBoardCore {
             Side::Black => (self.black_blockers(), self.white_blockers()),
         };
 
-        let mut moves: Vec<ChessMove> = Vec::with_capacity(40);
         let mut targets: BitBoard = match piece_type {
             PieceType::King => get_king_attack(source).bit_and(&friends.bit_not()),
             PieceType::Queen => get_queen_attack(source, blockers).bit_and(&friends.bit_not()),
@@ -760,18 +762,15 @@ impl ChessBoardCore {
             moves.push(ChessMove::new(source, target, MoveType::Normal));
             targets.pop_bit(target);
         }
-        return moves;
     }
 
-    fn calculate_pawn_moves(&self, source: Square) -> Vec<ChessMove> {
+    fn calculate_pawn_moves(&self, source: Square, moves: &mut Vec<ChessMove>) {
         let pinners = self.pinner_bb;
         let pin_mask = self.pin_mask(source);
         let check_mask = self.check_mask;
         let king_square = self.king_square();
         let blockers = self.blockers();
         let side = self.side_to_move;
-
-        let mut moves: Vec<ChessMove> = Vec::new();
 
         let mut is_pinned_diag: bool = false;
         let mut is_pinned_vert: bool = false;
@@ -963,11 +962,15 @@ impl ChessBoardCore {
             }
         }
 
-        return moves;
+        return;
     }
 
-    fn calculate_pawn_captures(&self, source: Square) -> Vec<ChessMove> {
-        return self.calculate_pawn_moves(source).into_iter().filter(|x| self.is_move_capture(x)).collect();
+    fn calculate_pawn_captures(&self, source: Square, moves: &mut Vec<ChessMove>) {
+        let mut pawn_moves: Vec<ChessMove> = Vec::new();
+        self.calculate_pawn_moves(source, &mut pawn_moves);
+        let mut filtered_pawn_moves: Vec<ChessMove> = pawn_moves.into_iter().filter(|x| self.is_move_capture(x)).collect();
+        moves.append(&mut filtered_pawn_moves);
+        return;
     }
 
     pub(super) fn compute_check_bb(&mut self) {

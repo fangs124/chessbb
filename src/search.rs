@@ -225,6 +225,7 @@ impl ChessBoard {
         //self.core.sort_moves(&mut moves);
         //for chess_move in tt_chess_move.into_iter().chain(moves.into_iter()) {
         for chess_move in moves {
+            //chef: only check every 1024 node
             if let Some((start, limit)) = data.time_limit {
                 if data.node_check_count >= data.node_check_limit {
                     if start.elapsed() > limit {
@@ -280,7 +281,7 @@ impl ChessBoard {
         return best_value;
     }
 
-    const QUIESCENE_FALLBACK_DEPTH: u16 = 3;
+    const QUIESCENE_FALLBACK_DEPTH: u16 = 5;
     //pub fn negamax(&mut self, a: i16, b: i16, d: usize, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>, is_q: bool) -> i16
     fn quiescence_negamax(&mut self, a: i16, b: i16, d: u16, ev: &mut impl Evaluator, data: &mut NegamaxData) -> i16 {
         data.ply += 1;
