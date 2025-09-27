@@ -540,7 +540,6 @@ impl ChessBoardCore {
             Side::Black => (self.black_blockers(), self.white_blockers()),
         };
 
-        let mut moves: Vec<ChessMove> = Vec::with_capacity(40);
         let mut targets: BitBoard = match piece_type {
             PieceType::King => get_king_attack(source).bit_and(&friends.bit_not()),
             PieceType::Queen => get_queen_attack(source, blockers).bit_and(&friends.bit_not()),
