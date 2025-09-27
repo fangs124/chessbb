@@ -19,7 +19,7 @@ pub use crate::bitboard::{PieceType, Side, ChessPiece};
 pub use crate::chessmove::{ChessMove, LexiOrd};
 pub use crate::square::Square;
 pub use crate::search::{Evaluator, NegamaxData, MATERIAL_EVAL, MaterialEvaluator, LOSE_SCORE, WIN_SCORE};
-pub use crate::transposition::{AtomicTranspositionTable, TranspositionTable, PositionData, NodeType};
+pub use crate::transposition::{AtomicTranspositionTable, TranspositionTable, PositionData, NodeType, SmallAtomicTranspositionTable, SmallPositionData};
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GameState {
     Finished(GameResult),
