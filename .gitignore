@@ -1,4 +1,7 @@
 /target
 flamegraph.svg
 perf.data
+perf.data.old
 notes.txt
+standard.epd
+standard.fen
