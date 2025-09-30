@@ -13,6 +13,15 @@ impl Default for Square {
 }
 
 impl Square {
+    pub(crate) const WHITE_KINGSIDE_ROOK_SQ_SOURCE: Square = Square { data: 00 };
+    pub(crate) const WHITE_KINGSIDE_ROOK_SQ_TARGET: Square = Square { data: 02 };
+    pub(crate) const WHITE_QUEENSIDE_ROOK_SQ_SOURCE: Square = Square { data: 07 };
+    pub(crate) const WHITE_QUEENSIDE_ROOK_SQ_TARGET: Square = Square { data: 04 };
+    pub(crate) const BLACK_KINGSIDE_ROOK_SQ_SOURCE: Square = Square { data: 56 };
+    pub(crate) const BLACK_KINGSIDE_ROOK_SQ_TARGET: Square = Square { data: 58 };
+    pub(crate) const BLACK_QUEENSIDE_ROOK_SQ_SOURCE: Square = Square { data: 63 };
+    pub(crate) const BLACK_QUEENSIDE_ROOK_SQ_TARGET: Square = Square { data: 60 };
+
     pub const MIN: u8 = 0;
     pub const MAX: u8 = 63;
 

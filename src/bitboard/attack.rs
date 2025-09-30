@@ -23,6 +23,8 @@ const W_PAWN_ATTACKS: [BitBoard; 64] = init_pawn_attack(Side::White);
 const B_PAWN_ATTACKS: [BitBoard; 64] = init_pawn_attack(Side::Black);
 const KNIGHT_ATTACKS: [BitBoard; 64] = init_knight_attack();
 const KING_ATTACKS: [BitBoard; 64] = init_king_attack();
+const BISHOP_ATTACKS: [BitBoard; 64] = init_bishop_attack();
+const ROOK_ATTACKS: [BitBoard; 64] = init_rook_attack();
 
 #[inline(always)]
 pub const fn get_pawn_attack(square: Square, side: Side) -> BitBoard {
@@ -53,22 +55,24 @@ pub const fn get_king_attack(square: Square) -> BitBoard {
 }
 
 #[inline(always)]
+pub const fn get_bishop_ray(square: Square) -> BitBoard {
+    BISHOP_ATTACKS[square.to_usize()]
+}
+
+#[inline(always)]
+pub const fn get_rook_ray(square: Square) -> BitBoard {
+    ROOK_ATTACKS[square.to_usize()]
+}
+
+#[inline(always)]
 pub const fn get_bishop_attack(square: Square, blockers: BitBoard) -> BitBoard {
-    let m = magic_index(
-        BISHOP_MAGICS[square.to_usize()],
-        blockers.bit_and(&BISHOP_MBB_MASK[square.to_usize()]),
-        BISHOP_OCC_BITCOUNT[square.to_usize()],
-    );
+    let m = magic_index(BISHOP_MAGICS[square.to_usize()], blockers.bit_and(&BISHOP_MBB_MASK[square.to_usize()]), BISHOP_OCC_BITCOUNT[square.to_usize()]);
     return BISHOP_ATTACKS_MBB[square.to_usize()][m];
 }
 
 #[inline(always)]
 pub const fn get_rook_attack(square: Square, blockers: BitBoard) -> BitBoard {
-    let m = magic_index(
-        ROOK_MAGICS[square.to_usize()],
-        blockers.bit_and(&ROOK_MBB_MASK[square.to_usize()]),
-        ROOK_OCC_BITCOUNT[square.to_usize()],
-    );
+    let m = magic_index(ROOK_MAGICS[square.to_usize()], blockers.bit_and(&ROOK_MBB_MASK[square.to_usize()]), ROOK_OCC_BITCOUNT[square.to_usize()]);
     return ROOK_ATTACKS_MBB[square.to_usize()][m];
 }
 

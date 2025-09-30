@@ -127,6 +127,26 @@ pub(super) const fn init_king_attack() -> [BitBoard; 64] {
     return attack_array;
 }
 
+pub(super) const fn init_bishop_attack() -> [BitBoard; 64] {
+    let mut i: usize = 0;
+    let mut attack_array: [BitBoard; 64] = [BitBoard::ZERO; 64];
+    while i < 64 {
+        attack_array[i] = naive_bishop_attack(i, BitBoard::ZERO);
+        i += 1;
+    }
+    return attack_array;
+}
+
+pub(super) const fn init_rook_attack() -> [BitBoard; 64] {
+    let mut i: usize = 0;
+    let mut attack_array: [BitBoard; 64] = [BitBoard::ZERO; 64];
+    while i < 64 {
+        attack_array[i] = naive_rook_attack(i, BitBoard::ZERO);
+        i += 1;
+    }
+    return attack_array;
+}
+
 pub(super) const fn naive_bishop_attack(i: usize, blockers: BitBoard) -> BitBoard {
     let i_rank: isize = (i as isize) / 8isize;
     let i_file: isize = (i as isize) % 8isize;

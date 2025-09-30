@@ -18,5 +18,15 @@ match_like_matches_macro = "allow"
 collapsible_if = "allow"
 
 [dependencies]
+serde = { version = "1.0", features = ["derive"], optional = true }
 bytemuck = { version = "1.23", features = ["derive"] }
 atomic = "0.6"
+arrayvec = { version = "0.7.6", optional = true }
+[features]
+# Defines a feature named `webp` that does not enable any other features.
+default = ["small_atomic_tt", "serde"]
+small_atomic_tt = []
+serde = ["dep:serde"]
+arrayvec = ["dep:arrayvec"]            #not implemented yet
+#https://doc.rust-lang.org/reference/conditional-compilation.html#the-cfg-attribute
+#https://doc.rust-lang.org/cargo/reference/features.html

@@ -9,8 +9,11 @@ mod perft;
 mod square;
 mod zobrist;
 mod transposition;
+
+use serde::{Deserialize, Serialize};
+
 use crate::{
-    bitboard::*, chessmove::MoveType, zobrist::{ZobristHash, ZobristTable}
+    bitboard::*, chessmove::MoveType, movegen::SIZE, zobrist::{ZobristHash, ZobristTable}
 };
 
 
@@ -27,6 +30,7 @@ pub enum GameState {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum GameResult {
     WhiteWins,
     BlackWins,
@@ -169,7 +173,7 @@ impl ChessBoard {
     }
 
     //#[inline(always)]
-    //fn generate_moves(&self) -> Vec<ChessMove> {
+    //fn generate_moves(&self) ->Vec<ChessMove> {
     //    if self.zobrist_table.count_hash(self.core.hash()) >= 3 || self.core.fifty_move_rule_counter > 100 {
     //        return Vec::new();
     //    }
@@ -196,7 +200,7 @@ impl ChessBoard {
         }
 
         let skip: Option<Vec<PieceType>> = Some(vec![PieceType::King, PieceType::Knight]);
-        let moves: Vec<ChessMove> = self.core.generate_moves(skip);
+        let moves:Vec<ChessMove> = self.core.generate_moves(skip);
         if moves.len() != 0 {
             return (Some(moves),GameState::Ongoing);
         } else if self.is_king_in_check(Side::White) {
@@ -872,8 +876,8 @@ impl ChessBoardCore {
         while pinners.is_not_zero() {
             let pinner = pinners.lsb_square().unwrap();
             // check if square is between king and potential_pinner
-            if RAYS[self.king_square().to_usize()][pinner.to_usize()].nth_is_not_zero(square) {
-                pin_mask = pin_mask.bit_or(&RAYS[self.king_square().to_usize()][pinner.to_usize()].bit_or(&BitBoard::nth(pinner)))
+            if RAYS[self.king_square(self.side()).to_usize()][pinner.to_usize()].nth_is_not_zero(square) {
+                pin_mask = pin_mask.bit_or(&RAYS[self.king_square(self.side()).to_usize()][pinner.to_usize()].bit_or(&BitBoard::nth(pinner)))
             }
             pinners.pop_bit(pinner);
         }
@@ -881,8 +885,8 @@ impl ChessBoardCore {
     } 
     
     #[inline(always)]
-    pub(crate) const fn king_square(&self) -> Square {
-        match self.side_to_move {
+    pub(crate) const fn king_square(&self, side: Side) -> Square {
+        match side {
             Side::White => self.piece_bbs[cpt_index!(K)].lsb_square().expect("king_square: king must be present"),
             Side::Black => self.piece_bbs[cpt_index!(k)].lsb_square().expect("king_square: king must be present"),
         }

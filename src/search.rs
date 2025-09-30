@@ -105,11 +105,19 @@ impl NegamaxData {
 
 type AtomicTT = AtomicTranspositionTable;
 type SmallAtomicTT = SmallAtomicTranspositionTable;
+const QUIESCENE_FALLBACK_DEPTH: u16 = u8::MAX as u16;
+
+#[cfg(feature = "small_atomic_tt")]
+pub(crate) type TT = SmallAtomicTT;
+
+#[cfg(not(feature = "small_atomic_tt"))]
+pub(crate) type TT = AtomicTT;
+
 const NODE_CHECK_COUNT_LIMIT: usize = 1024;
 pub const LOSE_SCORE: i16 = (i16::MIN + 2) / 2;
 pub const WIN_SCORE: i16 = -LOSE_SCORE;
 impl ChessBoard {
-    pub fn negamax(&mut self, a: i16, b: i16, d: usize, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>, is_q: bool) -> i16 {
+    pub fn negamax(&mut self, a: i16, b: i16, d: usize, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<TT>, is_q: bool, qd: u16) -> i16 {
         data.ply += 1;
         let (moves, game_state) = self.try_check_state();
         if let GameState::Finished(state) = game_state {
@@ -131,7 +139,7 @@ impl ChessBoard {
             data.ply -= 1;
             //return ev.eval(self);
             return match is_q {
-                true => self.quiescence_negamax(a, b, Self::QUIESCENE_FALLBACK_DEPTH, ev, data),
+                true => self.quiescence_negamax(a, b, qd, ev, data),
                 false => ev.eval(self),
             };
         }
@@ -165,7 +173,7 @@ impl ChessBoard {
                     if !self.core.is_move_illegal(&tt_chess_move) && position_data.ty() != NodeType::Beta {
                         let snapshot: ChessBoardSnapshot = self.explore_state(&tt_chess_move);
                         data.node_count += 1; //apparently this is the accepted way to count nps
-                        let value: i16 = -self.negamax(-b, -alpha, d - 1, ev, data, tt.clone(), is_q);
+                        let value: i16 = -self.negamax(-b, -alpha, d - 1, ev, data, tt.clone(), is_q, qd);
                         self.restore_state(snapshot);
 
                         if value > best_value {
@@ -222,7 +230,7 @@ impl ChessBoard {
 
             let snapshot: ChessBoardSnapshot = self.explore_state(&chess_move);
             data.node_count += 1; //apparently this is the accepted way to count nps
-            let value: i16 = -self.negamax(-b, -alpha, d - 1, ev, data, tt.clone(), is_q);
+            let value: i16 = -self.negamax(-b, -alpha, d - 1, ev, data, tt.clone(), is_q, qd);
             self.restore_state(snapshot);
 
             if value > best_value {
@@ -247,7 +255,6 @@ impl ChessBoard {
         return best_value;
     }
 
-    const QUIESCENE_FALLBACK_DEPTH: u16 = 5;
     //pub fn negamax(&mut self, a: i16, b: i16, d: usize, ev: &mut impl Evaluator, data: &mut NegamaxData, tt: Arc<AtomicTT>, is_q: bool) -> i16
     fn quiescence_negamax(&mut self, a: i16, b: i16, d: u16, ev: &mut impl Evaluator, data: &mut NegamaxData) -> i16 {
         data.ply += 1;

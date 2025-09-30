@@ -2,6 +2,7 @@ use std::{fmt::Display, slice::Iter};
 
 use crate::square::Square;
 pub use attack::*;
+use serde::{Deserialize, Serialize};
 
 pub mod bit_ops;
 pub mod attack;
@@ -12,6 +13,7 @@ pub struct BitBoard {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Side {
     White,
     Black,
